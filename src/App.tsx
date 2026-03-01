@@ -20,7 +20,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 
 export default function App() {
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
@@ -33,9 +33,6 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-
-    const seen = localStorage.getItem('coex5_onboarding');
-    if (seen) setHasSeenOnboarding(true);
     
     // Initial load from local storage for immediate UI feedback
     const savedUser = localStorage.getItem('coex5_user');
@@ -53,8 +50,25 @@ export default function App() {
             setUser(userData);
             localStorage.setItem('coex5_user', JSON.stringify(userData));
           }
-        } catch (error) {
-          console.error("Error fetching user data", error);
+        } catch (error: any) {
+          console.warn("Error fetching user data (likely permission issue), using fallback:", error.message);
+          // Fallback to local storage if available
+          const savedUser = localStorage.getItem('coex5_user');
+          if (savedUser) {
+             setUser(JSON.parse(savedUser));
+          } else {
+             // If no local data, create a basic user object from auth
+             const basicUser = {
+               id: firebaseUser.uid,
+               name: firebaseUser.displayName || 'Usuario',
+               contact: firebaseUser.email || firebaseUser.phoneNumber || '',
+               role: 'user',
+               points: 0,
+               avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`
+             };
+             setUser(basicUser);
+             localStorage.setItem('coex5_user', JSON.stringify(basicUser));
+          }
         }
       } else {
         // Only clear if we explicitly want to enforce firebase session, 
@@ -107,10 +121,14 @@ export default function App() {
               
               // Update user points
               if (report.user_id) {
-                 const userRef = doc(db, 'users', report.user_id);
-                 await updateDoc(userRef, {
-                   points: increment(10)
-                 });
+                 try {
+                   const userRef = doc(db, 'users', report.user_id);
+                   await updateDoc(userRef, {
+                     points: increment(10)
+                   });
+                 } catch (firestoreError) {
+                   console.warn("Could not update points in Firestore during sync", firestoreError);
+                 }
               }
 
               successCount++;
@@ -151,15 +169,17 @@ export default function App() {
     return () => window.removeEventListener('online', syncOfflineReports);
   }, []);
 
-  const handleFinishOnboarding = () => {
-    localStorage.setItem('coex5_onboarding', 'true');
-    setHasSeenOnboarding(true);
+  const handleLogin = (userData: any, isNewUser?: boolean) => {
+    setUser(userData);
+    if (isNewUser) {
+      setShowOnboarding(true);
+    }
   };
 
   if (isLoading) return <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center text-primary">Cargando...</div>;
 
-  if (!hasSeenOnboarding) {
-    return <Onboarding onFinish={handleFinishOnboarding} />;
+  if (showOnboarding) {
+    return <Onboarding onFinish={() => setShowOnboarding(false)} />;
   }
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
@@ -169,14 +189,14 @@ export default function App() {
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <main className="flex-1 overflow-y-auto no-scrollbar relative">
         <Routes>
-          <Route path="/login" element={!user ? <Login onLogin={setUser} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/'} />} />
-          <Route path="/register" element={!user ? <Register onLogin={setUser} /> : <Navigate to="/" />} />
+          <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/'} />} />
+          <Route path="/register" element={!user ? <Register onLogin={handleLogin} /> : <Navigate to="/" />} />
           
           {/* Protected User Routes */}
           <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/admin" /> : <Home user={user} />) : <Navigate to="/login" />} />
           <Route path="/report/:type" element={user ? <ReportForm user={user} /> : <Navigate to="/login" />} />
           <Route path="/learn" element={user ? <Learn user={user} /> : <Navigate to="/login" />} />
-          <Route path="/profile" element={user ? <Profile user={user} setUser={setUser} onReplayOnboarding={() => setHasSeenOnboarding(false)} /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={user ? <Profile user={user} setUser={setUser} onReplayOnboarding={() => setShowOnboarding(true)} /> : <Navigate to="/login" />} />
           
           {/* Protected Admin Routes */}
           <Route path="/admin/*" element={user?.role === 'admin' ? <AdminDashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} />

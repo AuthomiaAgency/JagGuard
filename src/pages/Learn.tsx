@@ -6,6 +6,7 @@ import localforage from 'localforage';
 import Header from '../components/Header';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { MOCK_GROUPS, MOCK_GUIDES } from '../lib/mockData';
 
 // Map of available icons for groups
 const iconMap: Record<string, any> = {
@@ -68,8 +69,11 @@ export default function Learn({ user }: { user: any }) {
           if (cachedGroups) setGroups(cachedGroups);
           if (cachedGuides) setGuides(cachedGuides);
         }
-      } catch (error) {
-        console.error('Error fetching guides', error);
+      } catch (error: any) {
+        console.warn('Error fetching guides (likely permission issue), using mock data:', error.message);
+        // Fallback to mock data
+        setGroups(MOCK_GROUPS);
+        setGuides(MOCK_GUIDES);
       } finally {
         setIsLoading(false);
       }
@@ -362,7 +366,7 @@ export default function Learn({ user }: { user: any }) {
           className="mb-6"
         >
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 leading-tight">
-            Contenido de calidad<br/>de Coex5.0
+            APRENDE CON COEX5.0
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Aprende sobre prevención, rastros y normativas.</p>
         </motion.div>

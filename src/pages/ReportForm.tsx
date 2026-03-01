@@ -9,7 +9,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { db, storage } from '../lib/firebase';
 import { collection, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 
 // Fix Leaflet icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -22,8 +22,6 @@ L.Icon.Default.mergeOptions({
 const animals = [
   { id: 'jaguar', name: 'Jaguar', icon: '🐆' },
   { id: 'puma', name: 'Puma', icon: '🐈' },
-  { id: 'serpiente', name: 'Serpiente', icon: '🐍' },
-  { id: 'oso-perezoso', name: 'Oso Perezoso', icon: '🦥' },
   { id: 'otros', name: 'Otros', icon: '🐾' },
   { id: 'desconocido', name: 'No estoy seguro', icon: '❓' },
 ];
@@ -55,6 +53,7 @@ export default function ReportForm({ user }: { user: any }) {
   const [step, setStep] = useState(1); // 1: Animal, 2: Photo & Location
   const [animal, setAnimal] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +81,8 @@ export default function ReportForm({ user }: { user: any }) {
           console.error("Error getting location", err);
           // Default to a central location if denied/error (e.g., somewhere in South America)
           setLocation({ lat: -16.290154, lng: -63.588653 });
-        }
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
       setLocation({ lat: -16.290154, lng: -63.588653 });
@@ -94,7 +94,7 @@ export default function ReportForm({ user }: { user: any }) {
     };
   }, []);
 
-  const compressImage = (file: File): Promise<string> => {
+  const compressImage = (file: File): Promise<{ preview: string, blob: Blob }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -123,7 +123,17 @@ export default function ReportForm({ user }: { user: any }) {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.6)); // Compress to 60% quality
+          
+          const preview = canvas.toDataURL('image/jpeg', 0.4);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve({ preview, blob });
+            } else {
+               // Fallback if toBlob fails (rare)
+               resolve({ preview, blob: file }); 
+            }
+          }, 'image/jpeg', 0.4);
         };
       };
     });
@@ -132,8 +142,25 @@ export default function ReportForm({ user }: { user: any }) {
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const compressed = await compressImage(file);
-      setPhoto(compressed);
+      const { preview, blob } = await compressImage(file);
+      setPhoto(preview);
+      setPhotoBlob(blob);
+    }
+  };
+
+  const [loadingText, setLoadingText] = useState('');
+
+  const handleOfflineSave = async (data: any) => {
+    try {
+      setLoadingText('Guardando en dispositivo...');
+      const offlineReports: any[] = await localforage.getItem('offline_reports') || [];
+      offlineReports.push(data);
+      await localforage.setItem('offline_reports', offlineReports);
+      toast.success('Guardado sin conexión. Se enviará cuando mejore la red.');
+      navigate('/');
+    } catch (err) {
+      console.error("Error saving offline:", err);
+      toast.error('Error al guardar el reporte localmente.');
     }
   };
 
@@ -145,6 +172,7 @@ export default function ReportForm({ user }: { user: any }) {
     }
 
     setIsSubmitting(true);
+    setLoadingText('Procesando datos...');
 
     const reportData = {
       user_id: user.id,
@@ -161,22 +189,63 @@ export default function ReportForm({ user }: { user: any }) {
 
     try {
       if (isOnline) {
+        setLoadingText('Subiendo evidencia (0%)...');
         // Upload image to Firebase Storage
         const storageRef = ref(storage, `reports/${user.id}/${Date.now()}.jpg`);
-        await uploadString(storageRef, photo, 'data_url');
-        const downloadURL = await getDownloadURL(storageRef);
         
+        let downloadURL = '';
+        
+        if (photoBlob) {
+            const uploadTask = uploadBytesResumable(storageRef, photoBlob);
+            
+            await new Promise<void>((resolve, reject) => {
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        setLoadingText(`Subiendo evidencia (${Math.round(progress)}%)...`);
+                    }, 
+                    (error) => {
+                        if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/canceled') {
+                             reject(new Error('STORAGE_RETRY_LIMIT'));
+                        } else {
+                             reject(error);
+                        }
+                    }, 
+                    async () => {
+                        downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve();
+                    }
+                );
+            });
+        } else {
+             // Fallback for base64 if blob is missing
+             await uploadString(storageRef, photo, 'data_url');
+             downloadURL = await getDownloadURL(storageRef);
+        }
+        
+        setLoadingText('Guardando reporte...');
         // Update report data with real URL
         const finalReportData = { ...reportData, photo_url: downloadURL };
 
         // Save to Firestore
-        await addDoc(collection(db, 'reports'), finalReportData);
+        try {
+            await addDoc(collection(db, 'reports'), finalReportData);
+        } catch (dbError: any) {
+            if (dbError.code === 'permission-denied') {
+                throw new Error('No tienes permisos para enviar reportes. Contacta al administrador.');
+            }
+            throw dbError;
+        }
         
         // Update user points
-        const userRef = doc(db, 'users', user.id);
-        await updateDoc(userRef, {
-          points: increment(10)
-        });
+        try {
+          const userRef = doc(db, 'users', user.id);
+          await updateDoc(userRef, {
+            points: increment(10)
+          });
+        } catch (firestoreError) {
+          console.warn("Could not update points in Firestore, updating locally", firestoreError);
+        }
 
         // Update local user state points
         const updatedUser = { ...user, points: (user.points || 0) + 10 };
@@ -184,18 +253,21 @@ export default function ReportForm({ user }: { user: any }) {
 
         setShowSuccessModal(true);
       } else {
-        // Save offline
-        const offlineReports: any[] = await localforage.getItem('offline_reports') || [];
-        offlineReports.push(reportData);
-        await localforage.setItem('offline_reports', offlineReports);
-        toast.success('Guardado sin conexión. Se enviará cuando haya internet.');
-        navigate('/');
+        await handleOfflineSave(reportData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting report:", error);
-      toast.error('Error al enviar el reporte');
+      
+      if (error.message === 'STORAGE_RETRY_LIMIT' || error.code === 'storage/retry-limit-exceeded') {
+        console.warn("Storage retry limit exceeded, falling back to offline save.");
+        await handleOfflineSave(reportData);
+        return;
+      }
+
+      toast.error(error.message || 'Error al enviar el reporte. Intenta nuevamente.');
     } finally {
       setIsSubmitting(false);
+      setLoadingText('');
     }
   };
 
@@ -417,7 +489,12 @@ export default function ReportForm({ user }: { user: any }) {
               disabled={isSubmitting || !photo || !location}
               className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-primary/25"
             >
-              {isSubmitting ? 'Enviando...' : (
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>{loadingText || 'Enviando...'}</span>
+                </div>
+              ) : (
                 <>
                   <Send className="w-5 h-5" />
                   Enviar Reporte

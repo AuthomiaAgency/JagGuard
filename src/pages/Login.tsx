@@ -7,8 +7,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Phone, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const COUNTRIES = [
-  { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
   { code: '+51', name: 'Perú', flag: '🇵🇪' },
+  { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
   { code: '+55', name: 'Brasil', flag: '🇧🇷' },
   { code: '+57', name: 'Colombia', flag: '🇨🇴' },
   { code: '+54', name: 'Argentina', flag: '🇦🇷' },
@@ -16,13 +16,13 @@ const COUNTRIES = [
   { code: '+52', name: 'México', flag: '🇲🇽' },
 ];
 
-export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
+export default function Login({ onLogin }: { onLogin: (user: any, isNewUser?: boolean) => void }) {
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [contact, setContact] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  const [countryCode, setCountryCode] = useState('+591');
+  const [countryCode, setCountryCode] = useState('+51');
   const [phoneNumber, setPhoneNumber] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
@@ -35,13 +35,16 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
       const userCredential = await signInWithEmailAndPassword(auth, contact, password);
       
       // Fetch user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       let userData;
-      
-      if (userDoc.exists()) {
-        userData = { id: userCredential.user.uid, ...userDoc.data() };
-      } else {
-        // Fallback if document doesn't exist for some reason
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists()) {
+          userData = { id: userCredential.user.uid, ...userDoc.data() };
+        } else {
+          throw new Error("Document does not exist");
+        }
+      } catch (firestoreError) {
+        console.warn("Firestore read failed, using fallback data", firestoreError);
         userData = {
           id: userCredential.user.uid,
           name: userCredential.user.displayName || 'Usuario',
@@ -92,12 +95,16 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
       const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, 'Coex5_Phone_Auth_2024!');
       
       // Fetch user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       let userData;
-      if (userDoc.exists()) {
-        userData = { id: userCredential.user.uid, ...userDoc.data() };
-      } else {
-        // Fallback if document doesn't exist for some reason
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists()) {
+          userData = { id: userCredential.user.uid, ...userDoc.data() };
+        } else {
+          throw new Error("Document does not exist");
+        }
+      } catch (firestoreError) {
+        console.warn("Firestore read failed, using fallback data", firestoreError);
         userData = {
           id: userCredential.user.uid,
           name: 'Usuario',
@@ -196,7 +203,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
                   <select 
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="bg-surface-dark border border-surface-lighter rounded-xl px-3 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all appearance-none cursor-pointer"
+                    className="bg-surface-dark border border-surface-lighter rounded-xl px-2 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all appearance-none cursor-pointer w-[100px] shrink-0 text-center"
                   >
                     {COUNTRIES.map(c => (
                       <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
@@ -206,7 +213,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
                     type="tel" 
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="flex-1 bg-surface-dark border border-surface-lighter rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    className="flex-1 bg-surface-dark border border-surface-lighter rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-w-0"
                     placeholder="71234567"
                     required
                   />

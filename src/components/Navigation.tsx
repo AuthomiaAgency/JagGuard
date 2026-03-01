@@ -40,7 +40,7 @@ export default function Navigation({ user }: { user: any }) {
             <div className={clsx("p-1.5 rounded-full px-4", path === '/learn' && "bg-primary/10 dark:bg-primary/20")}>
               <BookOpen className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-bold tracking-wide">Aprende</span>
+            <span className="text-[10px] font-bold tracking-wide text-center leading-tight">Aprender</span>
           </Link>
         )}
 

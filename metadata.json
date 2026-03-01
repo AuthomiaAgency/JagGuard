@@ -1,5 +1,5 @@
 {
-  "name": "",
-  "description": "",
-  "requestFramePermissions": []
+  "name": "Coex5.0",
+  "description": "Aplicación para el reporte y prevención de conflictos con fauna silvestre.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
 }

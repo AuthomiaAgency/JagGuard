@@ -57,6 +57,9 @@ function DashboardHome() {
   const [activeTab, setActiveTab] = useState<'recientes' | 'totales' | 'verificados' | 'canjes' | 'usuarios'>('recientes');
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const recentMapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchReports();
@@ -650,7 +653,7 @@ function Editor() {
     try {
       const groupsRef = collection(db, 'groups');
       const querySnapshot = await getDocs(groupsRef);
-      const fetchedGroups = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const fetchedGroups = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setGroups(fetchedGroups);
       if (fetchedGroups.length > 0 && !group) {
         setGroup(fetchedGroups[0].name);

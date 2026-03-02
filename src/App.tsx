@@ -46,7 +46,14 @@ export default function App() {
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            const userData = { id: firebaseUser.uid, ...userDoc.data() };
+            const userData = { id: firebaseUser.uid, ...userDoc.data() } as any;
+            
+            // Force admin role for specific email
+            if (firebaseUser.email === 'authomia.agency@gmail.com' && userData.role !== 'admin') {
+              await updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+              userData.role = 'admin';
+            }
+
             setUser(userData);
             localStorage.setItem('coex5_user', JSON.stringify(userData));
           }
@@ -55,14 +62,19 @@ export default function App() {
           // Fallback to local storage if available
           const savedUser = localStorage.getItem('coex5_user');
           if (savedUser) {
-             setUser(JSON.parse(savedUser));
+             let parsedUser = JSON.parse(savedUser);
+             // Force admin role for specific email even in fallback
+             if (firebaseUser.email === 'authomia.agency@gmail.com' && parsedUser.role !== 'admin') {
+                parsedUser.role = 'admin';
+             }
+             setUser(parsedUser);
           } else {
              // If no local data, create a basic user object from auth
              const basicUser = {
                id: firebaseUser.uid,
                name: firebaseUser.displayName || 'Usuario',
                contact: firebaseUser.email || firebaseUser.phoneNumber || '',
-               role: 'user',
+               role: firebaseUser.email === 'authomia.agency@gmail.com' ? 'admin' : 'user',
                points: 0,
                avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`
              };

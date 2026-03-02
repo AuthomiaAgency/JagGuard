@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield } from 'lucide-react';
+import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield, MessageCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -9,9 +9,9 @@ import 'leaflet.heat';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import Header from '../../components/Header';
-import html2canvas from 'html2canvas';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { toPng, toBlob } from 'html-to-image';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
 import { MOCK_USERS, MOCK_REPORTS, MOCK_REDEMPTIONS, MOCK_GROUPS } from '../../lib/mockData';
@@ -54,9 +54,10 @@ function DashboardHome() {
   const [stats, setStats] = useState({ total: 0, verified: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'recientes' | 'totales' | 'verificados' | 'canjes' | 'usuarios'>('recientes');
+  const [activeTab, setActiveTab] = useState<'recientes' | 'totales' | 'verificados' | 'canjes' | 'usuarios' | 'mensajes'>('recientes');
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const recentMapRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,20 @@ function DashboardHome() {
     fetchReports();
     fetchRedemptions();
     fetchUsers();
+    fetchMessages();
   }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const messagesRef = collection(db, 'messages');
+      const q = query(messagesRef, orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(q);
+      setMessages(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (error: any) {
+      console.warn('Error fetching messages:', error.message);
+      // Fallback or empty
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -236,18 +250,76 @@ function DashboardHome() {
     toast.success('Excel exportado correctamente');
   };
 
+  const exportToCSV = (type: 'all' | 'recent' | 'verified') => {
+    let dataToExport = [];
+    let filename = '';
+
+    if (type === 'all') {
+      dataToExport = allReports;
+      filename = `Reportes_Totales_Coex5_${new Date().toISOString().split('T')[0]}.csv`;
+    } else if (type === 'recent') {
+      dataToExport = reports;
+      filename = `Reportes_30Dias_Coex5_${new Date().toISOString().split('T')[0]}.csv`;
+    } else {
+      dataToExport = reports.filter(r => r.status === 'verified');
+      filename = `Reportes_Verificados_30Dias_Coex5_${new Date().toISOString().split('T')[0]}.csv`;
+    }
+
+    if (dataToExport.length === 0) {
+      toast.error('No hay datos para exportar en esta categoría');
+      return;
+    }
+
+    const headers = [
+      'TIPO DE REPORTE',
+      'FECHA Y HORA',
+      'COORDENADAS EXACTAS',
+      'ANIMAL',
+      'SITUACIÓN / NOTAS',
+      'ENLACE DE EVIDENCIA',
+      'CONTACTO DE USUARIO',
+      'ESTADO'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...dataToExport.map(r => [
+        r.type.toUpperCase(),
+        `"${new Date(r.created_at).toLocaleString()}"`,
+        `"${r.lat}, ${r.lng}"`,
+        r.animal.toUpperCase(),
+        `"${(r.notes || 'N/A').replace(/"/g, '""')}"`,
+        r.photo_url || 'Sin foto',
+        r.anonymous ? 'Anónimo' : `"${(r.user_name || 'N/A').replace(/"/g, '""')}"`,
+        r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    setShowExportModal(false);
+    toast.success('CSV exportado correctamente');
+  };
+
   const copyChartToClipboard = async () => {
     if (chartRef.current) {
       try {
-        const canvas = await html2canvas(chartRef.current);
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            toast.success('Gráfica copiada al portapapeles');
-          }
-        });
+        const blob = await toBlob(chartRef.current);
+        if (blob) {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          toast.success('Gráfica copiada al portapapeles');
+        }
       } catch (err) {
         toast.error('Error al copiar gráfica');
       }
@@ -257,15 +329,13 @@ function DashboardHome() {
   const copyMapToClipboard = async (ref: React.RefObject<HTMLDivElement>) => {
     if (ref.current) {
       try {
-        const canvas = await html2canvas(ref.current, { useCORS: true, allowTaint: true });
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            toast.success('Mapa copiado al portapapeles');
-          }
-        });
+        const blob = await toBlob(ref.current, { cacheBust: true, style: { transform: 'scale(1)' } });
+        if (blob) {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          toast.success('Mapa copiado al portapapeles');
+        }
       } catch (err) {
         console.error(err);
         toast.error('Error al copiar mapa');
@@ -310,24 +380,36 @@ function DashboardHome() {
                 </button>
               </div>
               <div className="p-5 space-y-3">
-                <button onClick={() => exportToExcel('all')} className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
-                  <p className="font-bold text-slate-900 dark:text-white">REPORTES TOTALES (Histórico)</p>
-                  <p className="text-xs text-slate-500 mt-1">Todos los reportes registrados en el sistema.</p>
-                </button>
-                <button onClick={() => exportToExcel('recent')} className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
-                  <p className="font-bold text-slate-900 dark:text-white">REPORTES TOTALES (Últimos 30 días)</p>
-                  <p className="text-xs text-slate-500 mt-1">Todos los reportes del último mes.</p>
-                </button>
-                <button onClick={() => exportToExcel('verified')} className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
-                  <p className="font-bold text-slate-900 dark:text-white">REPORTES VERIFICADOS (Últimos 30 días)</p>
-                  <p className="text-xs text-slate-500 mt-1">Solo reportes aprobados del último mes.</p>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => exportToExcel('all')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">Excel: Histórico</p>
+                  </button>
+                  <button onClick={() => exportToCSV('all')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">CSV: Histórico</p>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => exportToExcel('recent')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">Excel: 30 Días</p>
+                  </button>
+                  <button onClick={() => exportToCSV('recent')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">CSV: 30 Días</p>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => exportToExcel('verified')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">Excel: Verificados</p>
+                  </button>
+                  <button onClick={() => exportToCSV('verified')} className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-surface-lighter hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">CSV: Verificados</p>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div 
             onClick={() => setActiveTab('totales')}
             className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'totales' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-500' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-blue-300'}`}
@@ -375,6 +457,18 @@ function DashboardHome() {
               <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Usuarios</h3>
             </div>
             <p className="text-2xl font-black text-slate-900 dark:text-white">{users.length}</p>
+          </div>
+          <div 
+            onClick={() => setActiveTab('mensajes')}
+            className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'mensajes' ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-teal-300'}`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-lg">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Mensajes</h3>
+            </div>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{messages.length}</p>
           </div>
         </div>
 
@@ -551,6 +645,55 @@ function DashboardHome() {
                   )}
                 </div>
               ))
+            ) : activeTab === 'mensajes' ? (
+              messages.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p>No hay mensajes nuevos.</p>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <div key={msg.id} className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden shadow-sm p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2 ${
+                          msg.status === 'read' ? 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-400' :
+                          'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400'
+                        }`}>
+                          {msg.status === 'read' ? 'Leído' : 'Nuevo'}
+                        </span>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-lg leading-tight">{msg.user_name}</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{msg.user_contact}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(msg.created_at).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">Ref: {msg.reference}</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-surface-lighter p-3 rounded-xl text-sm text-slate-700 dark:text-slate-300">
+                      {msg.message}
+                    </div>
+                    {msg.status !== 'read' && (
+                      <div className="mt-3 flex justify-end">
+                        <button 
+                          onClick={async () => {
+                            try {
+                              await updateDoc(doc(db, 'messages', msg.id), { status: 'read' });
+                              toast.success('Mensaje marcado como leído');
+                              fetchMessages();
+                            } catch (e) {
+                              toast.error('Error al actualizar');
+                            }
+                          }}
+                          className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" /> Marcar como Leído
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )
             ) : (
               displayReports.map((report) => (
                 <div key={report.id} className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden shadow-sm">
@@ -641,6 +784,7 @@ function Editor() {
   const [showPreview, setShowPreview] = useState(false);
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [group, setGroup] = useState('');
   const [groupName, setGroupName] = useState('');
   const [groups, setGroups] = useState<any[]>([]);
@@ -687,6 +831,7 @@ function Editor() {
       await addDoc(collection(db, 'guides'), {
         title,
         subtitle,
+        image_url: imageUrl,
         content,
         group,
         created_at: new Date().toISOString()
@@ -694,6 +839,7 @@ function Editor() {
       toast.success('Guía publicada correctamente');
       setTitle('');
       setSubtitle('');
+      setImageUrl('');
       setContent('');
     } catch (error) {
       toast.error('Error al publicar guía');
@@ -773,6 +919,17 @@ function Editor() {
               </div>
               
               <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">URL de Imagen de Portada</label>
+                <input 
+                  type="text" 
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  className="w-full bg-slate-50 dark:bg-surface-lighter border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grupo</label>
                 <select 
                   value={group}
@@ -790,54 +947,56 @@ function Editor() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Plantilla</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button 
-                    onClick={() => handleTemplateChange('blank')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${template === 'blank' ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-50 dark:bg-surface-lighter border-slate-200 dark:border-slate-700 text-slate-500'}`}
-                  >
-                    <LayoutTemplate className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Lienzo en Blanco</span>
-                  </button>
-                  <button 
-                    onClick={() => handleTemplateChange('gallery')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${template === 'gallery' ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-50 dark:bg-surface-lighter border-slate-200 dark:border-slate-700 text-slate-500'}`}
-                  >
-                    <ImageIcon className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Galería</span>
-                  </button>
-                  <button 
-                    onClick={() => handleTemplateChange('infographic')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${template === 'infographic' ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-50 dark:bg-surface-lighter border-slate-200 dark:border-slate-700 text-slate-500'}`}
-                  >
-                    <ListOrdered className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">Infografía</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Contenido (WYSIWYG)</label>
-                  <button 
-                    onClick={() => setShowPreview(!showPreview)}
-                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
-                  >
-                    <Eye className="w-3 h-3" /> {showPreview ? 'Ocultar Vista Previa' : 'Vista Previa'}
-                  </button>
+                  <div className="flex gap-2">
+                    <label className="cursor-pointer text-xs font-bold text-slate-500 hover:text-primary flex items-center gap-1 transition-colors">
+                      <input 
+                        type="file" 
+                        accept=".txt,.md,.html" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const text = event.target?.result as string;
+                              // Basic conversion for text/md to HTML (very simple)
+                              // For production, use a library like marked or mammoth for docx
+                              setContent(text.replace(/\n/g, '<br/>')); 
+                              toast.success('Contenido importado');
+                            };
+                            reader.readAsText(file);
+                          }
+                        }}
+                      />
+                      <FileText className="w-3 h-3" /> Importar Texto
+                    </label>
+                    <button 
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                    >
+                      <Eye className="w-3 h-3" /> {showPreview ? 'Ocultar Vista Previa' : 'Vista Previa'}
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
                   <ReactQuill 
                     theme="snow" 
                     value={content} 
                     onChange={setContent} 
-                    className="h-64 text-slate-900 dark:text-white"
+                    className="h-96 text-slate-900 dark:text-white"
                     modules={{
                       toolbar: [
-                        [{ 'header': [1, 2, 3, false] }],
+                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                        [{ 'font': [] }],
+                        [{ 'size': ['small', false, 'large', 'huge'] }],
                         ['bold', 'italic', 'underline', 'strike'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'script': 'sub'}, { 'script': 'super' }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
                         [{ 'align': [] }],
+                        ['blockquote', 'code-block'],
                         ['link', 'image', 'video'],
                         ['clean']
                       ],
@@ -847,13 +1006,14 @@ function Editor() {
               </div>
 
               {showPreview && (
-                <div className="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-surface-dark shadow-lg">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2">
-                    <Eye className="w-4 h-4" /> Vista Previa en Vivo
+                <div className="mt-16 p-8 border border-slate-200 dark:border-slate-700 rounded-3xl bg-white dark:bg-surface-dark shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-orange-500"></div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-8 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" /> Vista Previa en Vivo
                   </h4>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {title && <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{title}</h1>}
-                    {subtitle && <p className="text-lg text-slate-500 dark:text-slate-400 mb-6 font-medium">{subtitle}</p>}
+                  <div className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:tracking-tight prose-a:text-primary prose-img:rounded-2xl prose-img:shadow-lg">
+                    {title && <h1 className="text-slate-900 dark:text-white mb-2">{title}</h1>}
+                    {subtitle && <p className="text-xl text-slate-500 dark:text-slate-400 mb-8 font-medium leading-relaxed">{subtitle}</p>}
                     <div dangerouslySetInnerHTML={{ __html: content }} />
                   </div>
                 </div>

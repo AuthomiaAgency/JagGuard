@@ -166,6 +166,12 @@ export default function ReportForm({ user }: { user: any }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user || !user.id) {
+      toast.error('Error de sesión. Por favor vuelve a iniciar sesión.');
+      return;
+    }
+
     if (!animal || !photo || !location) {
       toast.error('Por favor completa todos los campos requeridos');
       return;
@@ -176,6 +182,8 @@ export default function ReportForm({ user }: { user: any }) {
 
     const reportData = {
       user_id: user.id,
+      user_name: user.name || 'Usuario',
+      user_contact: user.contact || user.email || '',
       type,
       animal,
       notes,
@@ -195,32 +203,38 @@ export default function ReportForm({ user }: { user: any }) {
         
         let downloadURL = '';
         
-        if (photoBlob) {
-            const uploadTask = uploadBytesResumable(storageRef, photoBlob);
-            
-            await new Promise<void>((resolve, reject) => {
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        setLoadingText(`Subiendo evidencia (${Math.round(progress)}%)...`);
-                    }, 
-                    (error) => {
-                        if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/canceled') {
-                             reject(new Error('STORAGE_RETRY_LIMIT'));
-                        } else {
-                             reject(error);
-                        }
-                    }, 
-                    async () => {
-                        downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        resolve();
-                    }
-                );
-            });
-        } else {
-             // Fallback for base64 if blob is missing
-             await uploadString(storageRef, photo, 'data_url');
-             downloadURL = await getDownloadURL(storageRef);
+        try {
+          if (photoBlob) {
+              const uploadTask = uploadBytesResumable(storageRef, photoBlob);
+              
+              await new Promise<void>((resolve, reject) => {
+                  uploadTask.on('state_changed', 
+                      (snapshot) => {
+                          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                          setLoadingText(`Subiendo evidencia (${Math.round(progress)}%)...`);
+                      }, 
+                      (error) => {
+                          console.error("Upload error:", error);
+                          if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/canceled') {
+                               reject(new Error('STORAGE_RETRY_LIMIT'));
+                          } else {
+                               reject(error);
+                          }
+                      }, 
+                      async () => {
+                          downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                          resolve();
+                      }
+                  );
+              });
+          } else {
+               // Fallback for base64 if blob is missing
+               await uploadString(storageRef, photo, 'data_url');
+               downloadURL = await getDownloadURL(storageRef);
+          }
+        } catch (uploadError: any) {
+          console.error("Upload failed, trying offline save", uploadError);
+          throw new Error('UPLOAD_FAILED');
         }
         
         setLoadingText('Guardando reporte...');
@@ -231,8 +245,13 @@ export default function ReportForm({ user }: { user: any }) {
         try {
             await addDoc(collection(db, 'reports'), finalReportData);
         } catch (dbError: any) {
+            console.error("Firestore error:", dbError);
             if (dbError.code === 'permission-denied') {
-                throw new Error('No tienes permisos para enviar reportes. Contacta al administrador.');
+                // If permission denied, we can't do much online, but maybe save offline?
+                // But offline sync will also fail if permission is denied.
+                // However, user said "hasta ahora no me aparece ningun dato".
+                // We should try to save offline as a backup.
+                throw new Error('PERMISSION_DENIED');
             }
             throw dbError;
         }
@@ -244,7 +263,7 @@ export default function ReportForm({ user }: { user: any }) {
             points: increment(10)
           });
         } catch (firestoreError) {
-          console.warn("Could not update points in Firestore, updating locally", firestoreError);
+          console.warn("Could not update points in Firestore", firestoreError);
         }
 
         // Update local user state points
@@ -258,13 +277,21 @@ export default function ReportForm({ user }: { user: any }) {
     } catch (error: any) {
       console.error("Error submitting report:", error);
       
-      if (error.message === 'STORAGE_RETRY_LIMIT' || error.code === 'storage/retry-limit-exceeded') {
-        console.warn("Storage retry limit exceeded, falling back to offline save.");
+      if (error.message === 'STORAGE_RETRY_LIMIT' || error.message === 'UPLOAD_FAILED' || error.code === 'storage/retry-limit-exceeded') {
+        console.warn("Upload failed, falling back to offline save.");
         await handleOfflineSave(reportData);
         return;
       }
+      
+      if (error.message === 'PERMISSION_DENIED') {
+         toast.error('No tienes permisos para enviar reportes. Contacta al administrador.');
+         // Optionally save offline anyway?
+         // await handleOfflineSave(reportData);
+         return;
+      }
 
-      toast.error(error.message || 'Error al enviar el reporte. Intenta nuevamente.');
+      toast.error('Error al enviar el reporte. Se intentará guardar localmente.');
+      await handleOfflineSave(reportData);
     } finally {
       setIsSubmitting(false);
       setLoadingText('');

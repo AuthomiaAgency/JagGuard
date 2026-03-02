@@ -405,17 +405,17 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         </div>
       )}
 
-      {/* Settings Modal - Unified */}
+          {/* Settings Modal - Unified */}
       {showSettings && (
         <div className="fixed inset-0 z-50 bg-background-light dark:bg-background-dark flex flex-col animate-in fade-in duration-200">
-          <header className="px-5 py-4 border-b border-slate-200 dark:border-surface-lighter flex items-center gap-3 bg-white dark:bg-surface-dark sticky top-0 z-10">
+          <header className="px-5 py-4 border-b border-slate-200 dark:border-surface-lighter flex items-center gap-3 bg-white dark:bg-surface-dark shrink-0">
             <button onClick={() => setShowSettings(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <ArrowLeft className="w-6 h-6 text-slate-900 dark:text-white" />
             </button>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">Editar Perfil</h1>
           </header>
           
-          <div className="flex-1 overflow-y-auto p-5 space-y-8 pb-32">
+          <div className="flex-1 overflow-y-auto p-5 space-y-8">
             
             {/* Avatar Section */}
             <section>
@@ -540,8 +540,8 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
 
           </div>
 
-          {/* Fixed Footer with Save Button */}
-          <div className="fixed bottom-0 left-0 right-0 p-5 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-surface-lighter z-20">
+          {/* Fixed Footer with Save Button - Now part of flex layout but sticky */}
+          <div className="p-5 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-surface-lighter shrink-0 safe-area-bottom">
             <button 
               onClick={handleSaveAll}
               className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"

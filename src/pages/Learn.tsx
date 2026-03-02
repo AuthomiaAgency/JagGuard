@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import localforage from 'localforage';
 import Header from '../components/Header';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
 import { MOCK_GROUPS, MOCK_GUIDES } from '../lib/mockData';
 
 // Map of available icons for groups
@@ -124,16 +124,47 @@ export default function Learn({ user }: { user: any }) {
     }
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactQuery.trim()) return;
     setIsSendingContact(true);
-    setTimeout(() => {
-      setIsSendingContact(false);
+    
+    try {
+      if (isOnline) {
+        await addDoc(collection(db, 'messages'), {
+          user_id: user.id || 'anonymous',
+          user_name: user.name || 'Usuario',
+          user_contact: user.contact || user.email || 'Sin contacto',
+          reference: selectedGuide.title,
+          message: contactQuery,
+          status: 'unread',
+          created_at: new Date().toISOString()
+        });
+        toast.success('Tu consulta ha sido enviada. En las próximas horas se contactará un especialista contigo.');
+      } else {
+        // Save offline
+        const offlineMessages = await localforage.getItem('offline_messages') as any[] || [];
+        offlineMessages.push({
+          user_id: user.id || 'anonymous',
+          user_name: user.name || 'Usuario',
+          user_contact: user.contact || user.email || 'Sin contacto',
+          reference: selectedGuide.title,
+          message: contactQuery,
+          status: 'unread',
+          created_at: new Date().toISOString()
+        });
+        await localforage.setItem('offline_messages', offlineMessages);
+        toast.success('Consulta guardada sin conexión. Se enviará cuando recuperes la señal.');
+      }
+      
       setShowContactForm(false);
       setContactQuery('');
-      toast.success('Tu consulta ha sido enviada. En las próximas horas se contactará un especialista contigo.');
-    }, 1500);
+    } catch (error) {
+      console.error("Error sending message", error);
+      toast.error('Error al enviar la consulta. Intenta nuevamente.');
+    } finally {
+      setIsSendingContact(false);
+    }
   };
 
   const isGuideSaved = (id: string) => savedGuides.some(g => g.id === id);

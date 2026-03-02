@@ -21,17 +21,18 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^12.10.0",
-    "html2canvas": "^1.4.1",
+    "html-to-image": "^1.11.13",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "localforage": "^1.10.0",
     "lucide-react": "^0.546.0",
+    "mammoth": "^1.11.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
-    "react-quill": "^2.0.0",
+    "react-quill-new": "^3.8.3",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.5.0",
@@ -48,11 +49,5 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  },
-  "overrides": {
-    "react-quill": {
-      "react": "$react",
-      "react-dom": "$react-dom"
-    }
   }
 }

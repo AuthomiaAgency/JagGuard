@@ -6,7 +6,6 @@ import localforage from 'localforage';
 import Header from '../components/Header';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
-import { MOCK_GROUPS, MOCK_GUIDES } from '../lib/mockData';
 
 // Map of available icons for groups
 const iconMap: Record<string, any> = {
@@ -70,10 +69,9 @@ export default function Learn({ user }: { user: any }) {
           if (cachedGuides) setGuides(cachedGuides);
         }
       } catch (error: any) {
-        console.warn('Error fetching guides (likely permission issue), using mock data:', error.message);
-        // Fallback to mock data
-        setGroups(MOCK_GROUPS);
-        setGuides(MOCK_GUIDES);
+        console.warn('Error fetching guides:', error.message);
+        setGroups([]);
+        setGuides([]);
       } finally {
         setIsLoading(false);
       }

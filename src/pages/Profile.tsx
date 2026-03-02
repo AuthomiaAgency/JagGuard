@@ -6,15 +6,14 @@ import Header from '../components/Header';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { updatePassword, updateProfile } from 'firebase/auth';
-import { MOCK_HISTORY } from '../lib/mockData';
 
 const RURAL_AVATARS = [
-  { id: 'farmer1', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer1&accessories=kurt&clothes=overall&facialHair=beardMedium' },
-  { id: 'farmer2', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer2&accessories=round&clothes=shirtCrewNeck&top=hat' },
-  { id: 'farmer3', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer3&clothes=collarAndSweater&top=shortHairShortWaved' },
-  { id: 'farmer4', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer4&accessories=sunglasses&clothes=graphicShirt&top=hijab' },
-  { id: 'farmer5', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer5&clothes=hoodie&top=turban' },
-  { id: 'farmer6', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=farmer6&clothes=blazerAndShirt&top=longHairStraight' },
+  { id: 'avatar1', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Felix' },
+  { id: 'avatar2', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Aneka' },
+  { id: 'avatar3', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Jude' },
+  { id: 'avatar4', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Avery' },
+  { id: 'avatar5', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Emery' },
+  { id: 'avatar6', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Brooklynn' },
 ];
 
 export default function Profile({ user, setUser, onReplayOnboarding }: { user: any, setUser: any, onReplayOnboarding: () => void }) {
@@ -60,9 +59,9 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
           setHistory(recentReports);
           setReportsCount(recentReports.length);
         } catch (error: any) {
-          console.warn("Error fetching history (likely permission issue), using mock data:", error.message);
-          setHistory(MOCK_HISTORY);
-          setReportsCount(MOCK_HISTORY.length);
+          console.warn("Error fetching history:", error.message);
+          setHistory([]);
+          setReportsCount(0);
         }
       };
       fetchHistory();
@@ -219,7 +218,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative mb-4 group cursor-pointer" onClick={() => setShowSettings(true)}>
             <div className="h-24 w-24 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border-4 border-white dark:border-background-dark shadow-xl relative">
-              <img src={user.avatar?.includes('http') ? user.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.avatar || user.name}`} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={user.avatar?.includes('http') ? user.avatar.replace('avataaars', 'notionists-neutral') : `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${user.avatar || user.name}`} alt="Avatar" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <Settings className="w-6 h-6 text-white" />
               </div>
@@ -422,7 +421,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Tu Avatar</h3>
               <div className="flex flex-col items-center">
                 <div className="w-32 h-32 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-primary mb-6 overflow-hidden shadow-xl relative group">
-                  <img src={tempAvatar || user.avatar} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  <img src={(tempAvatar || user.avatar)?.replace('avataaars', 'notionists-neutral')} alt="Avatar Preview" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-8 h-8 text-white" />
                   </div>

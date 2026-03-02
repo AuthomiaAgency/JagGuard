@@ -13,8 +13,7 @@ import { toPng, toBlob } from 'html-to-image';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
-import { MOCK_USERS, MOCK_REPORTS, MOCK_REDEMPTIONS, MOCK_GROUPS } from '../../lib/mockData';
+import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
 
 const AVAILABLE_ICONS = [
   { id: 'paw', icon: PawPrint, label: 'Huella' },
@@ -58,6 +57,7 @@ function DashboardHome() {
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [permissionError, setPermissionError] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const recentMapRef = useRef<HTMLDivElement>(null);
@@ -75,9 +75,10 @@ function DashboardHome() {
       const q = query(messagesRef, orderBy('created_at', 'desc'));
       const querySnapshot = await getDocs(q);
       setMessages(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setPermissionError(false);
     } catch (error: any) {
       console.warn('Error fetching messages:', error.message);
-      // Fallback or empty
+      if (error.code === 'permission-denied') setPermissionError(true);
     }
   };
 
@@ -86,22 +87,29 @@ function DashboardHome() {
       const usersRef = collection(db, 'users');
       const querySnapshot = await getDocs(usersRef);
       setUsers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setPermissionError(false);
     } catch (error: any) {
-      console.warn('Error fetching users (likely permission issue), using mock data:', error.message);
-      setUsers(MOCK_USERS);
+      console.warn('Error fetching users:', error.message);
+      if (error.code === 'permission-denied') setPermissionError(true);
+      setUsers([]);
     }
   };
 
   const handleUserRole = async (id: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+
     try {
-      const newRole = currentRole === 'admin' ? 'user' : 'admin';
       const ref = doc(db, 'users', id);
       await updateDoc(ref, { role: newRole });
       toast.success(`Rol actualizado a ${newRole}`);
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user role", error);
-      toast.error('Error al actualizar rol');
+      if (error.code === 'permission-denied') {
+        toast.error('Error de permisos en Firebase. Revisa las reglas de Firestore.');
+      } else {
+        toast.error('Error al actualizar rol');
+      }
     }
   };
 
@@ -111,9 +119,11 @@ function DashboardHome() {
       const q = query(redemptionsRef, orderBy('created_at', 'desc'));
       const querySnapshot = await getDocs(q);
       setRedemptions(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setPermissionError(false);
     } catch (error: any) {
-      console.warn('Error fetching redemptions (likely permission issue), using mock data:', error.message);
-      setRedemptions(MOCK_REDEMPTIONS);
+      console.warn('Error fetching redemptions:', error.message);
+      if (error.code === 'permission-denied') setPermissionError(true);
+      setRedemptions([]);
     }
   };
 
@@ -123,9 +133,13 @@ function DashboardHome() {
       await updateDoc(ref, { status });
       toast.success(`Canje ${status === 'approved' ? 'aprobado' : 'rechazado'}`);
       fetchRedemptions();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating redemption status", error);
-      toast.error('Error al actualizar estado');
+      if (error.code === 'permission-denied') {
+        toast.error('Error de permisos en Firebase. Revisa las reglas de Firestore.');
+      } else {
+        toast.error('Error al actualizar estado');
+      }
     }
   };
 
@@ -163,24 +177,15 @@ function DashboardHome() {
         name: key.toUpperCase().replace('-', ' '),
         count: typeCounts[key]
       })));
+      setPermissionError(false);
 
     } catch (error: any) {
-      console.warn('Error fetching reports (likely permission issue), using mock data:', error.message);
-      // Use mock data
-      const fetchedReports = MOCK_REPORTS;
-      setAllReports(fetchedReports);
-      setReports(fetchedReports);
-      setStats({ total: fetchedReports.length, verified: fetchedReports.filter((r: any) => r.status === 'verified').length });
-      
-      // Calculate chart data based on mock data
-      const typeCounts: Record<string, number> = {};
-      fetchedReports.forEach((r: any) => {
-        typeCounts[r.type] = (typeCounts[r.type] || 0) + 1;
-      });
-      setChartData(Object.keys(typeCounts).map(key => ({
-        name: key.toUpperCase().replace('-', ' '),
-        count: typeCounts[key]
-      })));
+      console.warn('Error fetching reports:', error.message);
+      if (error.code === 'permission-denied') setPermissionError(true);
+      setAllReports([]);
+      setReports([]);
+      setStats({ total: 0, verified: 0 });
+      setChartData([]);
     }
   };
 
@@ -191,9 +196,13 @@ function DashboardHome() {
       
       toast.success(`Reporte ${status === 'verified' ? 'verificado' : 'denegado'}`);
       fetchReports();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating status", error);
-      toast.error('Error al actualizar estado');
+      if (error.code === 'permission-denied') {
+        toast.error('Error de permisos en Firebase. Revisa las reglas de Firestore.');
+      } else {
+        toast.error('Error al actualizar estado');
+      }
     }
   };
 
@@ -344,7 +353,6 @@ function DashboardHome() {
   };
 
   const heatmapPoints: [number, number, number][] = allReports.map(r => [r.lat, r.lng, 1]);
-  const recentHeatmapPoints: [number, number, number][] = reports.map(r => [r.lat, r.lng, 1]);
 
   const displayReports = activeTab === 'recientes' 
     ? reports.filter(r => r.status === 'pending')
@@ -357,6 +365,31 @@ function DashboardHome() {
       <Header />
       
       <div className="p-5 space-y-6">
+        {permissionError && (
+          <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-red-800 dark:text-red-400">Error de Permisos en Firebase</h3>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                No se pueden leer ni escribir datos. Para que el dashboard funcione con la base de datos, debes actualizar las reglas de seguridad de Firestore en tu consola de Firebase:
+              </p>
+              <pre className="mt-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg text-[10px] text-red-800 dark:text-red-300 overflow-x-auto">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}`}
+              </pre>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-2 font-bold">
+                Actualmente estás viendo datos de prueba (MOCK DATA). Los cambios no se guardarán en la base de datos.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
           <button 
@@ -545,7 +578,7 @@ function DashboardHome() {
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               />
-              <HeatmapLayer points={recentHeatmapPoints} />
+              <HeatmapLayer points={heatmapPoints} />
               {reports.map((report) => (
                 <CircleMarker 
                   key={report.id} 
@@ -681,8 +714,12 @@ function DashboardHome() {
                               await updateDoc(doc(db, 'messages', msg.id), { status: 'read' });
                               toast.success('Mensaje marcado como leído');
                               fetchMessages();
-                            } catch (e) {
-                              toast.error('Error al actualizar');
+                            } catch (e: any) {
+                              if (e.code === 'permission-denied') {
+                                toast.error('Error de permisos en Firebase.');
+                              } else {
+                                toast.error('Error al actualizar');
+                              }
                             }
                           }}
                           className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
@@ -788,6 +825,7 @@ function Editor() {
   const [group, setGroup] = useState('');
   const [groupName, setGroupName] = useState('');
   const [groups, setGroups] = useState<any[]>([]);
+  const [permissionError, setPermissionError] = useState(false);
 
   useEffect(() => {
     fetchGroups();
@@ -802,12 +840,11 @@ function Editor() {
       if (fetchedGroups.length > 0 && !group) {
         setGroup(fetchedGroups[0].name);
       }
+      setPermissionError(false);
     } catch (error: any) {
-      console.warn('Error fetching groups (likely permission issue), using mock data:', error.message);
-      setGroups(MOCK_GROUPS);
-      if (MOCK_GROUPS.length > 0 && !group) {
-        setGroup(MOCK_GROUPS[0].name);
-      }
+      console.warn('Error fetching groups:', error.message);
+      if (error.code === 'permission-denied') setPermissionError(true);
+      setGroups([]);
     }
   };
 
@@ -827,6 +864,7 @@ function Editor() {
       toast.error('Completa el título y el contenido');
       return;
     }
+
     try {
       await addDoc(collection(db, 'guides'), {
         title,
@@ -841,8 +879,12 @@ function Editor() {
       setSubtitle('');
       setImageUrl('');
       setContent('');
-    } catch (error) {
-      toast.error('Error al publicar guía');
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        toast.error('Error de permisos en Firebase.');
+      } else {
+        toast.error('Error al publicar guía');
+      }
     }
   };
 
@@ -851,6 +893,7 @@ function Editor() {
       toast.error('Ingresa el nombre del grupo');
       return;
     }
+
     try {
       await addDoc(collection(db, 'groups'), {
         name: groupName,
@@ -860,8 +903,12 @@ function Editor() {
       toast.success('Grupo creado correctamente');
       setGroupName('');
       fetchGroups();
-    } catch (error) {
-      toast.error('Error al crear grupo');
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        toast.error('Error de permisos en Firebase.');
+      } else {
+        toast.error('Error al crear grupo');
+      }
     }
   };
 
@@ -869,6 +916,21 @@ function Editor() {
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-24">
       <Header />
       <div className="p-5 space-y-6">
+        {permissionError && (
+          <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-red-800 dark:text-red-400">Error de Permisos en Firebase</h3>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                No se pueden leer ni escribir datos. Para que el editor funcione con la base de datos, debes actualizar las reglas de seguridad de Firestore en tu consola de Firebase.
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-2 font-bold">
+                Actualmente estás viendo datos de prueba (MOCK DATA). Los cambios no se guardarán en la base de datos.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Editor CMS</h1>
           <button className="bg-primary hover:bg-primary-dark text-white p-2 rounded-xl transition-colors shadow-lg shadow-primary/20">

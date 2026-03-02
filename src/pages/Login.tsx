@@ -51,7 +51,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, isNewUser?: bo
           contact: userCredential.user.email,
           role: 'user',
           points: 0,
-          avatar: userCredential.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`
+          avatar: userCredential.user.photoURL || `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${userCredential.user.uid}`
         };
       }
       
@@ -111,7 +111,7 @@ export default function Login({ onLogin }: { onLogin: (user: any, isNewUser?: bo
           contact: fullNumber,
           role: 'user',
           points: 0,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`
+          avatar: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${userCredential.user.uid}`
         };
       }
 

@@ -3,9 +3,8 @@ import { Toaster } from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 import localforage from 'localforage';
 import toast from 'react-hot-toast';
-import { db, storage, auth } from './lib/firebase';
+import { db, auth } from './lib/firebase';
 import { collection, addDoc, updateDoc, doc, increment, getDoc } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 
 // Pages
@@ -76,7 +75,7 @@ export default function App() {
                contact: firebaseUser.email || firebaseUser.phoneNumber || '',
                role: firebaseUser.email === 'authomia.agency@gmail.com' ? 'admin' : 'user',
                points: 0,
-               avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`
+               avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`
              };
              setUser(basicUser);
              localStorage.setItem('coex5_user', JSON.stringify(basicUser));
@@ -109,25 +108,8 @@ export default function App() {
 
           for (const report of offlineReports) {
             try {
-              // Upload image to Firebase Storage if it's a base64 string
-              let photoUrl = report.photo_url;
-              if (photoUrl && photoUrl.startsWith('data:')) {
-                 const storageRef = ref(storage, `reports/${report.user_id}/${Date.now()}.jpg`);
-                 await uploadString(storageRef, photoUrl, 'data_url');
-                 photoUrl = await getDownloadURL(storageRef);
-              }
-
-              const finalReportData = { ...report, photo_url: photoUrl };
-              
-              // Remove id if it was generated locally to let Firestore generate one, or keep it if you want to enforce it.
-              // Firestore addDoc generates a new ID. If we want to keep the local ID, we should use setDoc.
-              // For simplicity, let's let Firestore generate a new ID and just ignore the local one, 
-              // or we can use the local ID as the doc ID.
-              // Let's use addDoc for now and remove the local 'id' if it exists in the object to avoid confusion, 
-              // although keeping it as a field is fine too.
-              
               // Clean up data before sending
-              const { id, ...dataToSend } = finalReportData;
+              const { id, ...dataToSend } = report;
 
               await addDoc(collection(db, 'reports'), dataToSend);
               

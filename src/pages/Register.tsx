@@ -76,7 +76,7 @@ export default function Register({ onLogin }: { onLogin: (user: any, isNewUser?:
       // Update profile with name
       await updateProfile(firebaseUser, {
         displayName: name,
-        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`
+        photoURL: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`
       });
 
       const userData = {
@@ -85,7 +85,7 @@ export default function Register({ onLogin }: { onLogin: (user: any, isNewUser?:
         contact: contact,
         role: 'user',
         points: 0,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+        avatar: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`,
         createdAt: new Date().toISOString()
       };
 
@@ -173,7 +173,7 @@ export default function Register({ onLogin }: { onLogin: (user: any, isNewUser?:
       // Update profile with name
       await updateProfile(firebaseUser, {
         displayName: name,
-        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`
+        photoURL: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`
       });
 
       const userData = {
@@ -182,7 +182,7 @@ export default function Register({ onLogin }: { onLogin: (user: any, isNewUser?:
         contact: fullNumber,
         role: 'user',
         points: 0,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+        avatar: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`,
         createdAt: new Date().toISOString()
       };
 

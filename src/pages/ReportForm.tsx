@@ -7,9 +7,8 @@ import Header from '../components/Header';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { collection, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 
 // Fix Leaflet icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -197,53 +196,11 @@ export default function ReportForm({ user }: { user: any }) {
 
     try {
       if (isOnline) {
-        setLoadingText('Subiendo evidencia (0%)...');
-        // Upload image to Firebase Storage
-        const storageRef = ref(storage, `reports/${user.id}/${Date.now()}.jpg`);
-        
-        let downloadURL = '';
-        
-        try {
-          if (photoBlob) {
-              const uploadTask = uploadBytesResumable(storageRef, photoBlob);
-              
-              await new Promise<void>((resolve, reject) => {
-                  uploadTask.on('state_changed', 
-                      (snapshot) => {
-                          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                          setLoadingText(`Subiendo evidencia (${Math.round(progress)}%)...`);
-                      }, 
-                      (error) => {
-                          console.error("Upload error:", error);
-                          if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/canceled') {
-                               reject(new Error('STORAGE_RETRY_LIMIT'));
-                          } else {
-                               reject(error);
-                          }
-                      }, 
-                      async () => {
-                          downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                          resolve();
-                      }
-                  );
-              });
-          } else {
-               // Fallback for base64 if blob is missing
-               await uploadString(storageRef, photo, 'data_url');
-               downloadURL = await getDownloadURL(storageRef);
-          }
-        } catch (uploadError: any) {
-          console.error("Upload failed, trying offline save", uploadError);
-          throw new Error('UPLOAD_FAILED');
-        }
-        
         setLoadingText('Guardando reporte...');
-        // Update report data with real URL
-        const finalReportData = { ...reportData, photo_url: downloadURL };
-
-        // Save to Firestore
+        
+        // Save to Firestore directly with base64 image
         try {
-            await addDoc(collection(db, 'reports'), finalReportData);
+            await addDoc(collection(db, 'reports'), reportData);
         } catch (dbError: any) {
             console.error("Firestore error:", dbError);
             if (dbError.code === 'permission-denied') {
@@ -276,12 +233,6 @@ export default function ReportForm({ user }: { user: any }) {
       }
     } catch (error: any) {
       console.error("Error submitting report:", error);
-      
-      if (error.message === 'STORAGE_RETRY_LIMIT' || error.message === 'UPLOAD_FAILED' || error.code === 'storage/retry-limit-exceeded') {
-        console.warn("Upload failed, falling back to offline save.");
-        await handleOfflineSave(reportData);
-        return;
-      }
       
       if (error.message === 'PERMISSION_DENIED') {
          toast.error('No tienes permisos para enviar reportes. Contacta al administrador.');

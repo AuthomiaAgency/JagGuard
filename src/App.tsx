@@ -188,7 +188,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 transition-colors duration-300">
-      <main className="flex-1 overflow-y-auto no-scrollbar relative">
+      <main className="flex-1 overflow-y-auto no-scrollbar relative pb-24">
         <Routes>
           <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/'} />} />
           <Route path="/register" element={!user ? <Register onLogin={handleLogin} /> : <Navigate to="/" />} />

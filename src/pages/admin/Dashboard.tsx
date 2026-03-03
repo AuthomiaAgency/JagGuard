@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield, MessageCircle, PlayCircle, Video, Link as LinkIcon, X } from 'lucide-react';
+import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield, MessageCircle, PlayCircle, Video, Link as LinkIcon, X, File, FileCode, FileJson, FileType, Globe, Upload, Trash2, Edit } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -70,12 +70,72 @@ function Editor() {
   const [guideSubtitle, setGuideSubtitle] = useState('');
   const [guideContent, setGuideContent] = useState('');
   const [guideGroup, setGuideGroup] = useState('');
-  const [guideImage, setGuideImage] = useState('');
-  const [guideVideo, setGuideVideo] = useState('');
   const [guideReadTime, setGuideReadTime] = useState(5);
-  const [guideFiles, setGuideFiles] = useState<{ name: string, url: string, type: string }[]>([]);
+  
+  // Media State
+  const [guideImageType, setGuideImageType] = useState<'link' | 'upload'>('link');
+  const [guideImage, setGuideImage] = useState('');
+  const [guideVideoType, setGuideVideoType] = useState<'link' | 'upload'>('link');
+  const [guideVideo, setGuideVideo] = useState('');
+  
+  const [guideFiles, setGuideFiles] = useState<any[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const [mediaModal, setMediaModal] = useState<{isOpen: boolean, type: 'image' | 'video' | 'button' | null}>({isOpen: false, type: null});
+  const [mediaData, setMediaData] = useState({ url: '', text: '', uploadType: 'link' as 'link' | 'upload' });
+
+  const [selectedMedia, setSelectedMedia] = useState<{ node: HTMLElement, x: number, y: number } | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const editorNode = document.querySelector('.ql-editor');
+    if (!editorNode) return;
+
+    const handleClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const mediaNode = target.tagName === 'IMG' || target.tagName === 'VIDEO' ? target : target.closest('.btn-link');
+
+      if (mediaNode) {
+        e.preventDefault();
+        const rect = (mediaNode as HTMLElement).getBoundingClientRect();
+        const containerRect = editorContainerRef.current?.getBoundingClientRect();
+
+        if (containerRect) {
+          setSelectedMedia({
+            node: mediaNode as HTMLElement,
+            x: rect.left - containerRect.left + (rect.width / 2),
+            y: rect.top - containerRect.top - 40,
+          });
+        }
+      } else {
+        setSelectedMedia(null);
+      }
+    };
+
+    const handleHide = () => setSelectedMedia(null);
+
+    editorNode.addEventListener('click', handleClick);
+    editorNode.addEventListener('input', handleHide);
+    editorNode.addEventListener('keydown', handleHide);
+
+    return () => {
+      editorNode.removeEventListener('click', handleClick);
+      editorNode.removeEventListener('input', handleHide);
+      editorNode.removeEventListener('keydown', handleHide);
+    };
+  }, [guideContent, activeView]);
+
+  const handleDeleteMedia = () => {
+    if (selectedMedia && selectedMedia.node) {
+      selectedMedia.node.remove();
+      const editorNode = document.querySelector('.ql-editor');
+      if (editorNode) {
+        setGuideContent(editorNode.innerHTML);
+      }
+      setSelectedMedia(null);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -181,6 +241,8 @@ function Editor() {
     setGuideVideo('');
     setGuideReadTime(5);
     setGuideFiles([]);
+    setGuideImageType('link');
+    setGuideVideoType('link');
   };
 
   const handleEditGroup = (group: any) => {
@@ -201,6 +263,8 @@ function Editor() {
     setGuideVideo(guide.video_url || '');
     setGuideReadTime(guide.read_time || 5);
     setGuideFiles(guide.files || []);
+    setGuideImageType('link');
+    setGuideVideoType('link');
     setActiveView('guides');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -229,21 +293,114 @@ function Editor() {
     }
   };
 
+  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setGuideImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCoverVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setGuideVideo(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Simulation of file upload - in a real app we'd upload to Storage
-      // Here we'll just use a placeholder or base64 if it's small
       const reader = new FileReader();
       reader.onload = (event) => {
         const newFile = {
           name: file.name,
           url: event.target?.result as string,
-          type: file.type
+          type: 'file',
+          mimeType: file.type
         };
         setGuideFiles([...guideFiles, newFile]);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleContentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        const editor = quillRef.current?.getEditor();
+        const range = editor?.getSelection(true);
+        if (editor && range) {
+          editor.insertEmbed(range.index, 'image', url);
+        } else {
+          setGuideContent(prev => prev + `<p><img src="${url}" alt="Image" /></p>`);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleContentVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        const editor = quillRef.current?.getEditor();
+        const range = editor?.getSelection(true);
+        if (editor && range) {
+          // For video upload, we might need a video tag instead of iframe
+          const html = `<p class="text-center my-4"><video src="${url}" controls style="max-width: 100%; border-radius: 12px;"></video></p>`;
+          editor.clipboard.dangerouslyPasteHTML(range.index, html);
+        } else {
+          setGuideContent(prev => prev + `<p class="text-center my-4"><video src="${url}" controls style="max-width: 100%; border-radius: 12px;"></video></p>`);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddLinkAttachment = () => {
+    const url = prompt('Ingrese la URL del recurso:');
+    if (url) {
+      const name = prompt('Nombre del recurso (opcional):') || url;
+      const newFile = {
+        name: name,
+        url: url,
+        type: 'link',
+        mimeType: 'link'
+      };
+      setGuideFiles([...guideFiles, newFile]);
+    }
+  };
+
+  const editFile = (index: number) => {
+    const file = guideFiles[index];
+    if (file.type === 'link') {
+      const newUrl = prompt('Editar URL del recurso:', file.url);
+      if (newUrl) {
+        const newName = prompt('Editar nombre del recurso:', file.name) || newUrl;
+        const newFiles = [...guideFiles];
+        newFiles[index] = { ...file, url: newUrl, name: newName };
+        setGuideFiles(newFiles);
+      }
+    } else {
+      const newName = prompt('Editar nombre del archivo:', file.name);
+      if (newName) {
+        const newFiles = [...guideFiles];
+        newFiles[index] = { ...file, name: newName };
+        setGuideFiles(newFiles);
+      }
     }
   };
 
@@ -463,7 +620,6 @@ function Editor() {
                     </div>
                   )}
                   <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-surface-lighter">
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-4">{guideTitle || 'Título de la Publicación'}</h1>
                     <div 
                       className="prose-custom max-w-none"
                       dangerouslySetInnerHTML={{ __html: guideContent || '<p className="text-slate-400 italic">Sin contenido aún...</p>' }}
@@ -475,15 +631,23 @@ function Editor() {
                         {guideFiles.map((file, i) => (
                           <div key={i} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-white dark:bg-slate-800 rounded-lg text-primary">
-                                <FileText className="w-4 h-4" />
+                              <div className={`p-2 rounded-lg ${file.type === 'link' ? 'bg-blue-50 text-blue-500 dark:bg-blue-500/10' : 'bg-white dark:bg-slate-800 text-primary'}`}>
+                                {file.type === 'link' ? <Globe className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-slate-900 dark:text-white">{file.name}</p>
-                                <p className="text-[10px] text-slate-500 uppercase">{file.type.split('/')[1] || 'DOC'}</p>
+                                <p className="text-[10px] text-slate-500 uppercase">
+                                  {file.type === 'link' ? 'Recurso Externo' : (file.mimeType?.split('/')[1] || 'Archivo')}
+                                </p>
                               </div>
                             </div>
-                            <Download className="w-4 h-4 text-slate-400" />
+                            {file.type === 'link' ? (
+                              <a href={file.url} target="_blank" rel="noopener noreferrer" className="p-1 text-slate-400 hover:text-primary">
+                                <LinkIcon className="w-4 h-4" />
+                              </a>
+                            ) : (
+                              <Download className="w-4 h-4 text-slate-400" />
+                            )}
                           </div>
                         ))}
                       </div>
@@ -538,121 +702,214 @@ function Editor() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Image Section */}
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_image')}</label>
-                      <div className="relative">
-                        <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          type="text" 
-                          value={guideImage}
-                          onChange={(e) => setGuideImage(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
-                          placeholder="https://..."
-                        />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_image')}</label>
+                        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                          <button 
+                            onClick={() => setGuideImageType('link')}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${guideImageType === 'link' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400'}`}
+                          >
+                            Link
+                          </button>
+                          <button 
+                            onClick={() => setGuideImageType('upload')}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${guideImageType === 'upload' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400'}`}
+                          >
+                            Upload
+                          </button>
+                        </div>
                       </div>
+                      
+                      {guideImageType === 'link' ? (
+                        <div className="relative">
+                          <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input 
+                            type="text" 
+                            value={guideImage}
+                            onChange={(e) => setGuideImage(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
+                            placeholder="https://..."
+                          />
+                          {guideImage && (
+                            <button onClick={() => setGuideImage('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        guideImage ? (
+                          <div className="flex items-center justify-between w-full h-[46px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl px-4">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" /> Imagen subida
+                            </span>
+                            <button onClick={() => setGuideImage('')} className="text-emerald-600 dark:text-emerald-400 hover:text-red-500 transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center w-full h-[46px] bg-slate-50 dark:bg-black/20 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group">
+                            <div className="flex items-center gap-2 text-slate-400 group-hover:text-primary transition-colors">
+                              <Upload className="w-4 h-4" />
+                              <span className="text-xs font-bold">Subir Imagen</span>
+                            </div>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleCoverImageUpload} />
+                          </label>
+                        )
+                      )}
                     </div>
+
+                    {/* Video Section */}
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_video')}</label>
-                      <div className="relative">
-                        <PlayCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          type="text" 
-                          value={guideVideo}
-                          onChange={(e) => setGuideVideo(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
-                          placeholder="https://youtube.com/..."
-                        />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_video')}</label>
+                        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                          <button 
+                            onClick={() => setGuideVideoType('link')}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${guideVideoType === 'link' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400'}`}
+                          >
+                            Link
+                          </button>
+                          <button 
+                            onClick={() => setGuideVideoType('upload')}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${guideVideoType === 'upload' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400'}`}
+                          >
+                            Upload
+                          </button>
+                        </div>
                       </div>
+                      
+                      {guideVideoType === 'link' ? (
+                        <div className="relative">
+                          <Video className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input 
+                            type="text" 
+                            value={guideVideo}
+                            onChange={(e) => setGuideVideo(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
+                            placeholder="https://..."
+                          />
+                          {guideVideo && (
+                            <button onClick={() => setGuideVideo('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        guideVideo ? (
+                          <div className="flex items-center justify-between w-full h-[46px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl px-4">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" /> Video subido
+                            </span>
+                            <button onClick={() => setGuideVideo('')} className="text-emerald-600 dark:text-emerald-400 hover:text-red-500 transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center w-full h-[46px] bg-slate-50 dark:bg-black/20 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group">
+                            <div className="flex items-center gap-2 text-slate-400 group-hover:text-primary transition-colors">
+                              <Upload className="w-4 h-4" />
+                              <span className="text-xs font-bold">Subir Video</span>
+                            </div>
+                            <input type="file" className="hidden" accept="video/*" onChange={handleCoverVideoUpload} />
+                          </label>
+                        )
+                      )}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.add_file')}</label>
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold text-slate-500">
-                          <Plus className="w-4 h-4" /> {t('editor.add_file')}
-                          <input type="file" className="hidden" onChange={handleFileUpload} />
-                        </label>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2">
+                  <div className="pt-4 border-t border-slate-100 dark:border-surface-lighter">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Recursos Adjuntos</label>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <label className="flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-black/20 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:border-primary/50 transition-all group">
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-all">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Subir Archivo</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">PDF, DOC, IMG</span>
+                        </div>
+                        <input type="file" className="hidden" onChange={handleFileUpload} />
+                      </label>
+
+                      <button 
+                        onClick={handleAddLinkAttachment}
+                        className="flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-black/20 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:border-primary/50 transition-all group"
+                      >
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-all">
+                          <LinkIcon className="w-6 h-6" />
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Agregar Enlace</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">URL Externa</span>
+                        </div>
+                      </button>
+                    </div>
+
+                    {guideFiles.length > 0 && (
+                      <div className="grid grid-cols-1 gap-3">
                         {guideFiles.map((file, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate max-w-[150px]">{file.name}</span>
-                            <button onClick={() => removeFile(i)} className="text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-500/10 rounded">
-                              <XCircle className="w-3.5 h-3.5" />
-                            </button>
+                          <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-surface-lighter shadow-sm group hover:shadow-md transition-all">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${file.type === 'link' ? 'bg-blue-50 text-blue-500 dark:bg-blue-500/10' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'}`}>
+                                {file.type === 'link' ? <Globe className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">{file.name}</p>
+                                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                                  {file.type === 'link' ? 'Recurso Externo' : (file.mimeType?.split('/')[1] || 'Archivo')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                              <button onClick={() => editFile(i)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => removeFile(i)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_content')}</label>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => {
-                          const url = prompt(t('editor.add_video_url'));
-                          if (url) {
-                            const editor = quillRef.current?.getEditor();
-                            const range = editor?.getSelection(true);
-                            if (editor && range) {
-                              editor.insertEmbed(range.index, 'video', url);
-                            } else {
-                              setGuideContent(prev => prev + `<p><iframe src="${url}" width="100%" height="315" frameborder="0" allowfullscreen></iframe></p>`);
-                            }
-                          }
-                        }}
-                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
-                        title={t('editor.add_video_url')}
-                      >
-                        <Video className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const url = prompt(t('editor.add_image_url'));
-                          if (url) {
-                            const editor = quillRef.current?.getEditor();
-                            const range = editor?.getSelection(true);
-                            if (editor && range) {
-                              editor.insertEmbed(range.index, 'image', url);
-                            } else {
-                              setGuideContent(prev => prev + `<p><img src="${url}" alt="Image" /></p>`);
-                            }
-                          }
-                        }}
-                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
-                        title={t('editor.add_image_url')}
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const text = prompt('Texto del botón (ej: Ver Video Completo):');
-                          if (text) {
-                            const url = prompt(t('editor.add_link'));
-                            if (url) {
-                              const editor = quillRef.current?.getEditor();
-                              const range = editor?.getSelection(true);
-                              if (editor && range) {
-                                editor.insertText(range.index, text, 'link', url);
-                              } else {
-                                setGuideContent(prev => prev + `<p class="text-center"><a href="${url}" target="_blank" class="btn-link">${text}</a></p>`);
-                              }
-                            }
-                          }
-                        }}
-                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
-                        title={t('editor.add_link')}
-                      >
-                        <LinkIcon className="w-4 h-4" />
-                      </button>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_content')}</label>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setMediaModal({isOpen: true, type: 'video'})}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                          title="Insertar Video"
+                        >
+                          <Video className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setMediaModal({isOpen: true, type: 'image'})}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                          title="Insertar Imagen"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setMediaModal({isOpen: true, type: 'button'})}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                          title="Agregar Botón de Enlace"
+                        >
+                          <div className="flex items-center gap-1">
+                            <LinkIcon className="w-4 h-4" />
+                            <span className="text-[10px] font-bold">Botón</span>
+                          </div>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-200 dark:border-surface-lighter h-[400px] flex flex-col">
+                  <div className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-200 dark:border-surface-lighter h-[400px] flex flex-col relative" ref={editorContainerRef}>
                     {(() => {
                       const ReactQuillAny = ReactQuill as any;
                       return (
@@ -676,6 +933,15 @@ function Editor() {
                         />
                       );
                     })()}
+                    {selectedMedia && (
+                      <button
+                        onClick={handleDeleteMedia}
+                        style={{ left: selectedMedia.x, top: selectedMedia.y, transform: 'translateX(-50%)' }}
+                        className="absolute z-50 bg-red-500 text-white px-3 py-1.5 rounded-lg shadow-lg text-xs font-bold flex items-center gap-1 hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" /> Eliminar
+                      </button>
+                    )}
                   </div>
                   <div className="flex gap-3 pt-4">
                     {editingGuide && (
@@ -697,71 +963,62 @@ function Editor() {
                   </div>
                 </div>
               </div>
+            </div>
             )}
           </div>
 
-          {/* Guides Table */}
+          {/* Guides Table - Moved to Bottom */}
           <div className="space-y-4" id="guides-table">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('editor.guides')}</h2>
             <div className="bg-white dark:bg-surface-dark rounded-3xl border border-slate-200 dark:border-surface-lighter shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-surface-lighter border-b border-slate-200 dark:border-slate-700">
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guides')}</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_group')}</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Media</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('admin.date')}</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">{t('admin.user_management')}</th>
+                <table className="w-full">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_title')}</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_group')}</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">{t('editor.actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {guides.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">{t('editor.no_guides')}</td>
+                        <td colSpan={3} className="px-6 py-12 text-center text-slate-400 text-sm">
+                          {t('editor.no_guides')}
+                        </td>
                       </tr>
                     ) : (
                       guides.map(guide => (
-                        <tr key={guide.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <tr key={guide.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
-                                {guide.image_url ? <img src={guide.image_url} className="w-full h-full object-cover" /> : <FileText className="w-5 h-5 m-2.5 text-slate-400" />}
-                              </div>
+                              {guide.image_url && (
+                                <img src={guide.image_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                              )}
                               <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-white">{guide.title}</p>
-                                <p className="text-[10px] text-slate-500">{guide.read_time} {t('learn.read_time').replace('{time}', '')}</p>
+                                <h3 className="font-bold text-slate-900 dark:text-white text-sm">{guide.title}</h3>
+                                <p className="text-[10px] text-slate-500">{guide.read_time} min</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                               {guide.group}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-1.5">
-                              {guide.image_url && <ImageIcon className="w-3.5 h-3.5 text-primary" title="Imagen" />}
-                              {guide.video_url && <PlayCircle className="w-3.5 h-3.5 text-primary" title="Video" />}
-                              {guide.files?.length > 0 && <FileText className="w-3.5 h-3.5 text-primary" title={`${guide.files.length} Archivos`} />}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-[10px] text-slate-500 font-medium">
-                            {new Date(guide.created_at).toLocaleDateString()}
-                          </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2">
                               <button 
                                 onClick={() => handleEditGuide(guide)}
-                                className="p-2 text-primary hover:bg-primary/10 dark:hover:bg-primary/20 rounded-xl transition-colors"
+                                className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
                               >
-                                <LayoutTemplate className="w-4 h-4" />
+                                <Edit className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => handleDeleteGuide(guide.id)}
-                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -771,6 +1028,156 @@ function Editor() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Modal */}
+      {mediaModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-surface-dark rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 dark:border-surface-lighter">
+            <div className="p-6 border-b border-slate-100 dark:border-surface-lighter flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                {mediaModal.type === 'image' && <><ImageIcon className="w-5 h-5 text-primary" /> Insertar Imagen</>}
+                {mediaModal.type === 'video' && <><Video className="w-5 h-5 text-primary" /> Insertar Video</>}
+                {mediaModal.type === 'button' && <><LinkIcon className="w-5 h-5 text-primary" /> Insertar Botón</>}
+              </h3>
+              <button 
+                onClick={() => setMediaModal({isOpen: false, type: null})}
+                className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {mediaModal.type !== 'button' && (
+                <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+                  <button 
+                    onClick={() => setMediaData({...mediaData, uploadType: 'link'})}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mediaData.uploadType === 'link' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-500'}`}
+                  >
+                    Desde URL
+                  </button>
+                  <button 
+                    onClick={() => setMediaData({...mediaData, uploadType: 'upload'})}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mediaData.uploadType === 'upload' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-500'}`}
+                  >
+                    Subir Archivo
+                  </button>
+                </div>
+              )}
+
+              {mediaModal.type === 'button' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Texto del Botón</label>
+                  <input 
+                    type="text" 
+                    value={mediaData.text}
+                    onChange={(e) => setMediaData({...mediaData, text: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="Ej: Ver Video Completo"
+                  />
+                </div>
+              )}
+
+              {(mediaModal.type === 'button' || mediaData.uploadType === 'link') && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">URL del Enlace</label>
+                  <input 
+                    type="text" 
+                    value={mediaData.url}
+                    onChange={(e) => setMediaData({...mediaData, url: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="https://..."
+                  />
+                </div>
+              )}
+
+              {mediaModal.type !== 'button' && mediaData.uploadType === 'upload' && (
+                <div>
+                  <label className="flex flex-col items-center justify-center w-full h-32 bg-slate-50 dark:bg-black/20 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group">
+                    <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-primary transition-colors">
+                      <Upload className="w-6 h-6" />
+                      <span className="text-sm font-bold">Haz clic para subir</span>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept={mediaModal.type === 'image' ? "image/*" : "video/*"} 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setMediaData({...mediaData, url: event.target?.result as string});
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }} 
+                    />
+                  </label>
+                  {mediaData.url && mediaData.uploadType === 'upload' && (
+                    <p className="text-xs text-emerald-500 font-bold mt-2 text-center flex items-center justify-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Archivo seleccionado
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <button 
+                onClick={() => {
+                  if (!mediaData.url) {
+                    toast.error('Por favor ingresa una URL o sube un archivo');
+                    return;
+                  }
+                  if (mediaModal.type === 'button' && !mediaData.text) {
+                    toast.error('Por favor ingresa el texto del botón');
+                    return;
+                  }
+
+                  const editor = quillRef.current?.getEditor();
+                  const range = editor?.getSelection(true);
+                  
+                  if (mediaModal.type === 'image') {
+                    if (editor && range) {
+                      editor.insertEmbed(range.index, 'image', mediaData.url);
+                    } else {
+                      setGuideContent(prev => prev + `<p><img src="${mediaData.url}" alt="Image" /></p>`);
+                    }
+                  } else if (mediaModal.type === 'video') {
+                    if (editor && range) {
+                      if (mediaData.uploadType === 'upload') {
+                        const html = `<p class="text-center my-4"><video src="${mediaData.url}" controls style="max-width: 100%; border-radius: 12px;"></video></p>`;
+                        editor.clipboard.dangerouslyPasteHTML(range.index, html);
+                      } else {
+                        editor.insertEmbed(range.index, 'video', mediaData.url);
+                      }
+                    } else {
+                      if (mediaData.uploadType === 'upload') {
+                        setGuideContent(prev => prev + `<p class="text-center my-4"><video src="${mediaData.url}" controls style="max-width: 100%; border-radius: 12px;"></video></p>`);
+                      } else {
+                        setGuideContent(prev => prev + `<p><iframe src="${mediaData.url}" width="100%" height="315" frameborder="0" allowfullscreen></iframe></p>`);
+                      }
+                    }
+                  } else if (mediaModal.type === 'button') {
+                    if (editor && range) {
+                      // Insert HTML directly for the button
+                      const html = `<p class="text-center my-4"><a href="${mediaData.url}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">${mediaData.text}</a></p>`;
+                      editor.clipboard.dangerouslyPasteHTML(range.index, html);
+                    } else {
+                      setGuideContent(prev => prev + `<p class="text-center my-4"><a href="${mediaData.url}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">${mediaData.text}</a></p>`);
+                    }
+                  }
+
+                  setMediaModal({isOpen: false, type: null});
+                  setMediaData({url: '', text: '', uploadType: 'link'});
+                }}
+                className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-all"
+              >
+                Insertar en el Contenido
+              </button>
             </div>
           </div>
         </div>
@@ -1443,25 +1850,40 @@ service cloud.firestore {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               {activeTab === 'recientes' ? t('admin.pending_reports') : activeTab === 'verificados' ? t('admin.verified_reports_30') : activeTab === 'canjes' ? t('admin.redemption_requests') : t('admin.report_history')}
             </h3>
-            {activeTab !== 'recientes' && (
-              <button onClick={() => setActiveTab('recientes')} className="text-xs text-primary font-bold">{t('admin.view_pending')}</button>
-            )}
           </div>
           
           <div className="space-y-4">
             {activeTab === 'mensajes' ? (
-              messages.map((m) => (
+              messages.filter(m => m.status !== 'read').map((m) => (
                 <div key={m.id} className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden shadow-sm p-4">
-                  <h4 className="font-bold text-slate-900 dark:text-white">{m.user_name}</h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">{t('admin.contact')}: {m.user_contact}</p>
-                  <div className="bg-slate-50 dark:bg-black/20 p-3 rounded-lg text-sm italic text-slate-700 dark:text-slate-300">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white">{m.user_name}</h4>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{t('admin.contact')}: {m.user_contact}</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, 'messages', m.id), { status: 'read' });
+                          toast.success('Mensaje marcado como leído');
+                          fetchMessages();
+                        } catch (error) {
+                          toast.error('Error al actualizar mensaje');
+                        }
+                      }}
+                      className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Listo
+                    </button>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-black/20 p-3 rounded-lg text-sm italic text-slate-700 dark:text-slate-300 mt-2">
                     "{m.message}"
                   </div>
                   <p className="text-xs text-slate-400 mt-2 text-right">{new Date(m.created_at).toLocaleString()}</p>
                 </div>
               ))
             ) : activeTab === 'canjes' ? (
-              redemptions.map((redemption) => (
+              redemptions.filter(r => r.status === 'pending').map((redemption) => (
                 <div key={redemption.id} className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden shadow-sm p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -1500,7 +1922,7 @@ service cloud.firestore {
                 </div>
               ))
             ) : (
-              displayReports.map((report) => (
+              displayReports.filter(r => r.status === 'pending').map((report) => (
                 <div key={report.id} className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -1541,7 +1963,7 @@ service cloud.firestore {
                       </div>
                       
                       <div className="flex gap-2">
-                        {report.status === 'pending' ? (
+                        {report.status === 'pending' && (
                           <>
                             <button 
                               onClick={() => handleStatusUpdate(report.id, 'denied')}
@@ -1558,12 +1980,6 @@ service cloud.firestore {
                               <CheckCircle className="w-5 h-5" />
                             </button>
                           </>
-                        ) : (
-                          <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${
-                            report.status === 'verified' ? 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-500/10' : 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/10'
-                          }`}>
-                            {report.status === 'verified' ? t('admin.status_verified') : t('admin.status_denied')}
-                          </span>
                         )}
                       </div>
                     </div>

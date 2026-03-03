@@ -108,8 +108,14 @@ export default function App() {
 
           for (const report of offlineReports) {
             try {
+              // Upload image to Firebase Storage if it's a base64 string
+              // REMOVED: Storage integration removed as per user request.
+              // Images are stored directly as base64 strings in Firestore.
+              
+              const finalReportData = { ...report, photo_url: report.photo_url };
+              
               // Clean up data before sending
-              const { id, ...dataToSend } = report;
+              const { id, ...dataToSend } = finalReportData;
 
               await addDoc(collection(db, 'reports'), dataToSend);
               

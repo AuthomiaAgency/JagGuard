@@ -229,6 +229,31 @@ export default function Learn({ user }: { user: any }) {
               className="prose dark:prose-invert prose-sm max-w-none prose-headings:font-bold prose-h2:text-primary prose-a:text-primary prose-img:rounded-xl"
               dangerouslySetInnerHTML={{ __html: selectedGuide.content }}
             />
+            
+            {selectedGuide.files && selectedGuide.files.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-slate-100 dark:border-surface-lighter space-y-3">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Archivos Adjuntos</h4>
+                {selectedGuide.files.map((file: any, i: number) => (
+                  <a 
+                    key={i} 
+                    href={file.url} 
+                    download={file.name}
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white dark:bg-slate-800 rounded-lg text-primary">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{file.name}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">{file.type?.split('/')[1] || 'DOC'}</p>
+                      </div>
+                    </div>
+                    <Download className="w-4 h-4 text-slate-400" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

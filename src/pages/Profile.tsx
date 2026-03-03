@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Settings, LogOut, ChevronRight, Award, Shield, User, Globe, Moon, Lock, Mail, FileText, ArrowLeft, HelpCircle, Camera, CheckCircle2 } from 'lucide-react';
+import { Settings, LogOut, ChevronRight, Award, Shield, User, Globe, Moon, Lock, Mail, FileText, ArrowLeft, HelpCircle, Camera, CheckCircle2, PawPrint, Cat, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { updatePassword, updateProfile } from 'firebase/auth';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const RURAL_AVATARS = [
   { id: 'avatar1', url: 'https://api.dicebear.com/7.x/notionists-neutral/svg?seed=Felix' },
@@ -18,6 +19,7 @@ const RURAL_AVATARS = [
 
 export default function Profile({ user, setUser, onReplayOnboarding }: { user: any, setUser: any, onReplayOnboarding: () => void }) {
   const navigate = useNavigate();
+  const { t, setLanguage: setAppLanguage } = useLanguage();
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -33,25 +35,20 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
   
   // Theme & Language State
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  const [language, setLanguage] = useState(localStorage.getItem('coex5_language') || 'es');
 
   const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    setTempLanguage(language);
-  }, [language]);
 
   useEffect(() => {
     if (user?.id) {
       const fetchHistory = async () => {
         try {
           const reportsRef = collection(db, 'reports');
-          // Assuming user.id is stored as user_id in reports
-          const q = query(reportsRef, where('user_id', '==', user.id), orderBy('created_at', 'desc'));
+          const q = query(reportsRef, where('user_id', '==', user.id));
           const querySnapshot = await getDocs(q);
           const reports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           
-          // Filter for last 30 days
+          reports.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          
           const thirtyDaysAgo = new Date();
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
           const recentReports = reports.filter((r: any) => new Date(r.created_at) >= thirtyDaysAgo);
@@ -81,7 +78,6 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
   const confirmRedeem = async () => {
     setIsRedeeming(true);
     try {
-      // Create a redemption request in Firestore
       await addDoc(collection(db, 'redemptions'), {
         user_id: user.id,
         user_name: user.name,
@@ -91,7 +87,6 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         created_at: new Date().toISOString()
       });
 
-      // Deduct points locally and in Firestore
       const newPoints = user.points - 150;
       try {
         const userRef = doc(db, 'users', user.id);
@@ -108,7 +103,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
       setShowRedeemSuccess(true);
     } catch (error) {
       console.error("Error redeeming", error);
-      toast.error('Error al canjear');
+      toast.error(t('profile.error_redeem'));
     } finally {
       setIsRedeeming(false);
     }
@@ -139,7 +134,6 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
 
   const handleSaveAll = async () => {
     try {
-      // 1. Update Firestore
       if (user.id) {
         try {
           const userRef = doc(db, 'users', user.id);
@@ -152,7 +146,6 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         }
       }
 
-      // 2. Update Auth Profile
       if (auth.currentUser && newName !== user.name) {
         try {
           await updateProfile(auth.currentUser, { displayName: newName, photoURL: tempAvatar });
@@ -161,49 +154,46 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         }
       }
 
-      // 3. Update Local State
       const updatedUser = { ...user, name: newName, avatar: tempAvatar };
       setUser(updatedUser);
       localStorage.setItem('coex5_user', JSON.stringify(updatedUser));
       
-      // 4. Update Language
-      setLanguage(tempLanguage);
-      localStorage.setItem('coex5_language', tempLanguage);
+      setAppLanguage(tempLanguage);
 
-      toast.success('Perfil actualizado correctamente');
+      toast.success(t('profile.success_update'));
       setShowSettings(false);
     } catch (error) {
       console.error("Error saving profile", error);
-      toast.error('Error al guardar cambios');
+      toast.error(t('profile.error_update'));
     }
   };
 
   const handleSavePassword = async () => {
     if (!passwords.new || !passwords.confirm) {
-      toast.error('Completa los campos de nueva contraseña');
+      toast.error(t('profile.error_password_fields'));
       return;
     }
     if (passwords.new !== passwords.confirm) {
-      toast.error('Las contraseñas nuevas no coinciden');
+      toast.error(t('profile.error_password_match'));
       return;
     }
     if (passwords.new.length < 6) {
-      toast.error('La nueva contraseña debe tener al menos 6 caracteres');
+      toast.error(t('profile.error_password_length'));
       return;
     }
     
     try {
       if (auth.currentUser) {
         await updatePassword(auth.currentUser, passwords.new);
-        toast.success('Contraseña actualizada correctamente');
+        toast.success(t('profile.success_password'));
         setShowPasswordChange(false);
         setPasswords({ current: '', new: '', confirm: '' });
       } else {
-        toast.error('No hay sesión activa para cambiar contraseña');
+        toast.error(t('profile.error_no_session'));
       }
     } catch (error) {
       console.error("Error updating password", error);
-      toast.error('Error al actualizar contraseña. Es posible que debas volver a iniciar sesión.');
+      toast.error(t('profile.error_password_update'));
     }
   };
 
@@ -240,7 +230,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Award className="w-6 h-6 text-yellow-300" />
-                  <span className="font-bold text-lg">Mis Puntos</span>
+                  <span className="font-bold text-lg">{t('profile.my_points')}</span>
                 </div>
                 <span className="text-2xl font-black">{user.points} <span className="text-sm font-medium opacity-80">/ 150</span></span>
               </div>
@@ -254,14 +244,14 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium opacity-90">
-                  {user.points >= 150 ? '¡Meta alcanzada!' : `Faltan ${150 - user.points} puntos`}
+                  {user.points >= 150 ? t('profile.goal_reached') : t('profile.points_missing', { points: 150 - user.points })}
                 </p>
                 <button 
                   onClick={handleRedeemClick}
                   disabled={user.points < 150 || isRedeeming}
                   className="bg-white text-primary px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Canjear
+                  {t('profile.redeem')}
                 </button>
               </div>
             </div>
@@ -275,23 +265,23 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="w-16 h-16 bg-orange-100 dark:bg-orange-500/20 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Confirmar Canje</h3>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('profile.confirm_redeem_title')}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                ¿Estás seguro de que deseas canjear 150 puntos por una recompensa?
+                {t('profile.confirm_redeem_desc')}
               </p>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowRedeemConfirm(false)} 
                   className="flex-1 py-3 rounded-xl text-slate-500 font-bold text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Cancelar
+                  {t('profile.cancel')}
                 </button>
                 <button 
                   onClick={confirmRedeem} 
                   disabled={isRedeeming}
                   className="flex-1 py-3 rounded-xl text-white font-bold text-sm bg-primary hover:bg-primary-dark transition-colors disabled:opacity-50"
                 >
-                  {isRedeeming ? 'Procesando...' : 'Sí, canjear'}
+                  {isRedeeming ? t('profile.processing') : t('profile.yes_redeem')}
                 </button>
               </div>
             </div>
@@ -305,15 +295,15 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">¡Solicitud Recibida!</h3>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('profile.request_received')}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                Se estará evaluando la calidad de sus puntos. Nos comunicaremos pronto a través de la información de contacto proporcionada.
+                {t('profile.request_received_desc')}
               </p>
               <button 
                 onClick={() => setShowRedeemSuccess(false)} 
                 className="w-full py-3 rounded-xl text-white font-bold text-sm bg-primary hover:bg-primary-dark transition-colors"
               >
-                Entendido
+                {t('profile.understood')}
               </button>
             </div>
           </div>
@@ -326,7 +316,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
             className="w-full bg-white dark:bg-surface-dark rounded-3xl p-6 border border-slate-200 dark:border-surface-lighter shadow-sm mb-6 flex items-center justify-between hover:border-primary/50 transition-colors text-left"
           >
             <div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Reportes Realizados (30 días)</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t('profile.reports_30_days')}</p>
               <p className="text-3xl font-black text-slate-900 dark:text-white">{reportsCount}</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -342,7 +332,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
                 <Settings className="w-5 h-5" />
               </div>
-              <span className="font-medium text-slate-900 dark:text-white">Configuración</span>
+              <span className="font-medium text-slate-900 dark:text-white">{t('profile.settings')}</span>
             </div>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
@@ -352,7 +342,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
                 <HelpCircle className="w-5 h-5" />
               </div>
-              <span className="font-medium text-slate-900 dark:text-white">Ver Tutorial</span>
+              <span className="font-medium text-slate-900 dark:text-white">{t('profile.tutorial')}</span>
             </div>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
@@ -362,7 +352,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded-lg text-red-500">
                 <LogOut className="w-5 h-5" />
               </div>
-              <span className="font-medium text-red-600 dark:text-red-500">Cerrar Sesión</span>
+              <span className="font-medium text-red-600 dark:text-red-500">{t('profile.logout')}</span>
             </div>
           </button>
         </div>
@@ -370,7 +360,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         {/* Support Footer */}
         <div className="mt-12 text-center">
           <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
-            <Mail className="w-3 h-3" /> Soporte: luiscbwwf@gmail.com
+            <Mail className="w-3 h-3" /> {t('profile.support')}: luiscbwwf@gmail.com
           </p>
         </div>
       </div>
@@ -382,11 +372,11 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
             <button onClick={() => setShowHistory(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark transition-colors">
               <ArrowLeft className="w-5 h-5 text-slate-900 dark:text-white" />
             </button>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Últimos 30 días</h1>
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('profile.history_title')}</h1>
           </header>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {history.length === 0 ? (
-              <p className="text-center text-slate-500 mt-10">No hay reportes recientes.</p>
+              <p className="text-center text-slate-500 mt-10">{t('profile.no_reports')}</p>
             ) : (
               history.map(item => (
                 <div key={item.id} className="bg-white dark:bg-surface-dark p-4 rounded-2xl border border-slate-200 dark:border-surface-lighter flex justify-between items-center">
@@ -396,7 +386,12 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
                       {new Date(item.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-2xl">{item.animal === 'jaguar' ? '🐆' : item.animal === 'puma' ? '🐈' : '🐾'}</div>
+                  <div className="text-2xl text-primary">
+                    {item.animal === 'jaguar' ? <PawPrint className="w-8 h-8" /> : 
+                     item.animal === 'puma' ? <Cat className="w-8 h-8" /> : 
+                     item.animal === 'otros' ? <Search className="w-8 h-8" /> : 
+                     <HelpCircle className="w-8 h-8" />}
+                  </div>
                 </div>
               ))
             )}
@@ -404,21 +399,21 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
         </div>
       )}
 
-          {/* Settings Modal - Unified */}
+      {/* Settings Modal - Unified */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 bg-background-light dark:bg-background-dark flex flex-col animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[60] bg-background-light dark:bg-background-dark flex flex-col animate-in fade-in duration-200">
           <header className="px-5 py-4 border-b border-slate-200 dark:border-surface-lighter flex items-center gap-3 bg-white dark:bg-surface-dark shrink-0">
             <button onClick={() => setShowSettings(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <ArrowLeft className="w-6 h-6 text-slate-900 dark:text-white" />
             </button>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Editar Perfil</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t('profile.edit_profile')}</h1>
           </header>
           
-          <div className="flex-1 overflow-y-auto p-5 space-y-8">
+          <div className="flex-1 overflow-y-auto p-5 space-y-8 pb-32">
             
             {/* Avatar Section */}
             <section>
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Tu Avatar</h3>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">{t('profile.avatar')}</h3>
               <div className="flex flex-col items-center">
                 <div className="w-32 h-32 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-primary mb-6 overflow-hidden shadow-xl relative group">
                   <img src={(tempAvatar || user.avatar)?.replace('avataaars', 'notionists-neutral')} alt="Avatar Preview" className="w-full h-full object-cover" />
@@ -448,10 +443,10 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
 
             {/* Personal Info Section */}
             <section className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Información Personal</h3>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">{t('profile.personal_info')}</h3>
               
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Nombre Completo</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">{t('profile.full_name')}</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
@@ -465,7 +460,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Correo / Contacto</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">{t('profile.contact')}</label>
                 <div className="relative opacity-70">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
@@ -484,7 +479,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
                 >
                   <div className="flex items-center gap-3">
                     <Lock className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Cambiar Contraseña</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">{t('profile.change_password')}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </button>
@@ -493,7 +488,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
 
             {/* Preferences Section */}
             <section className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Preferencias</h3>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">{t('profile.preferences')}</h3>
               
               <div className="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-surface-lighter overflow-hidden">
                 <div className="p-4 flex items-center justify-between border-b border-slate-200 dark:border-surface-lighter">
@@ -501,7 +496,7 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
                     <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
                       <Moon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
                     </div>
-                    <span className="font-medium text-slate-900 dark:text-white">Modo Oscuro</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{t('profile.dark_mode')}</span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isDarkMode} onChange={toggleTheme} />
@@ -514,12 +509,13 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
                     <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
                       <Globe className="w-5 h-5 text-slate-600 dark:text-slate-300" />
                     </div>
-                    <span className="font-medium text-slate-900 dark:text-white">Idioma</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{t('profile.language')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { code: 'es', name: 'Español' },
                       { code: 'en', name: 'English' },
+                      { code: 'pt', name: 'Português' },
                       { code: 'qu', name: 'Quechua' },
                       { code: 'ay', name: 'Aymara' }
                     ].map((lang) => (
@@ -536,17 +532,15 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
                 </div>
               </div>
             </section>
-
           </div>
 
-          {/* Fixed Footer with Save Button - Now part of flex layout but sticky */}
-          <div className="p-5 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-surface-lighter shrink-0 safe-area-bottom">
+          <div className="p-5 border-t border-slate-200 dark:border-surface-lighter bg-white dark:bg-surface-dark shrink-0 pb-10">
             <button 
               onClick={handleSaveAll}
               className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-5 h-5" />
-              Guardar Cambios
+              {t('profile.save_changes')}
             </button>
           </div>
         </div>
@@ -556,26 +550,26 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
       {showPasswordChange && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-surface-dark w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-6">
-            <h3 className="font-bold text-slate-900 dark:text-white mb-4">Cambiar Contraseña</h3>
+            <h3 className="font-bold text-slate-900 dark:text-white mb-4">{t('profile.change_password')}</h3>
             <div className="space-y-3 mb-4">
               <input 
                 type="password" 
                 value={passwords.new} 
                 onChange={(e) => setPasswords({...passwords, new: e.target.value})} 
                 className="w-full bg-slate-50 dark:bg-surface-lighter border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Nueva contraseña"
+                placeholder={t('profile.new_password')}
               />
               <input 
                 type="password" 
                 value={passwords.confirm} 
                 onChange={(e) => setPasswords({...passwords, confirm: e.target.value})} 
                 className="w-full bg-slate-50 dark:bg-surface-lighter border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Confirmar nueva contraseña"
+                placeholder={t('profile.confirm_password')}
               />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowPasswordChange(false)} className="flex-1 py-3 rounded-xl text-slate-500 font-bold text-sm bg-slate-100 dark:bg-slate-800">Cancelar</button>
-              <button onClick={handleSavePassword} className="flex-1 py-3 rounded-xl text-white font-bold text-sm bg-primary hover:bg-primary-dark">Guardar</button>
+              <button onClick={() => setShowPasswordChange(false)} className="flex-1 py-3 rounded-xl text-slate-500 font-bold text-sm bg-slate-100 dark:bg-slate-800">{t('profile.cancel')}</button>
+              <button onClick={handleSavePassword} className="flex-1 py-3 rounded-xl text-white font-bold text-sm bg-primary hover:bg-primary-dark">{t('profile.save')}</button>
             </div>
           </div>
         </div>

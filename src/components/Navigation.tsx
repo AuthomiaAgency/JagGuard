@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BookOpen, User, BarChart3, Edit3 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Navigation({ user }: { user: any }) {
   const location = useLocation();
   const path = location.pathname;
+  const { t } = useLanguage();
 
   const isAdmin = user?.role === 'admin';
 
@@ -16,7 +18,7 @@ export default function Navigation({ user }: { user: any }) {
             <div className={clsx("p-1.5 rounded-full px-4", path === '/' && "bg-primary/10 dark:bg-primary/20")}>
               <Home className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-bold tracking-wide">Reportar</span>
+            <span className="text-[10px] font-bold tracking-wide">{t('nav.report')}</span>
           </Link>
         )}
         
@@ -26,13 +28,13 @@ export default function Navigation({ user }: { user: any }) {
               <div className={clsx("p-1.5 rounded-full px-4", path === '/admin' && "bg-primary/10 dark:bg-primary/20")}>
                 <BarChart3 className="w-6 h-6" />
               </div>
-              <span className="text-[10px] font-bold tracking-wide">Dashboard</span>
+              <span className="text-[10px] font-bold tracking-wide">{t('nav.dashboard')}</span>
             </Link>
             <Link to="/admin/editor" className={clsx("flex flex-col items-center justify-center gap-1 w-16 transition-colors", path === '/admin/editor' ? "text-primary" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300")}>
               <div className={clsx("p-1.5 rounded-full px-4", path === '/admin/editor' && "bg-primary/10 dark:bg-primary/20")}>
                 <Edit3 className="w-6 h-6" />
               </div>
-              <span className="text-[10px] font-bold tracking-wide">Editor</span>
+              <span className="text-[10px] font-bold tracking-wide">{t('nav.editor')}</span>
             </Link>
           </>
         ) : (
@@ -40,7 +42,7 @@ export default function Navigation({ user }: { user: any }) {
             <div className={clsx("p-1.5 rounded-full px-4", path === '/learn' && "bg-primary/10 dark:bg-primary/20")}>
               <BookOpen className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-bold tracking-wide text-center leading-tight">Aprender</span>
+            <span className="text-[10px] font-bold tracking-wide text-center leading-tight">{t('nav.learn')}</span>
           </Link>
         )}
 
@@ -48,7 +50,7 @@ export default function Navigation({ user }: { user: any }) {
           <div className={clsx("p-1.5 rounded-full px-4", path === '/profile' && "bg-primary/10 dark:bg-primary/20")}>
             <User className="w-6 h-6" />
           </div>
-          <span className="text-[10px] font-bold tracking-wide">Perfil</span>
+          <span className="text-[10px] font-bold tracking-wide">{t('nav.profile')}</span>
         </Link>
       </div>
     </nav>

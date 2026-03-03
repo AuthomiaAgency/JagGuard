@@ -26,7 +26,7 @@ export default function App() {
 
   useEffect(() => {
     // Initialize theme
-    const theme = localStorage.getItem('coex5_theme') || 'dark';
+    const theme = localStorage.getItem('coex5_theme') || 'light';
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {

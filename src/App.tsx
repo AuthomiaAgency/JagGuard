@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import GuideDetail from './pages/GuideDetail';
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -192,6 +193,9 @@ export default function App() {
           <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={user.role === 'admin' ? '/admin' : '/'} />} />
           <Route path="/register" element={!user ? <Register onLogin={handleLogin} /> : <Navigate to="/" />} />
           
+          {/* Public Guide Detail Route */}
+          <Route path="/learn/:guideId" element={<GuideDetail user={user} />} />
+
           {/* Protected User Routes */}
           <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/admin" /> : <Home user={user} />) : <Navigate to="/login" />} />
           <Route path="/report/:type" element={user ? <ReportForm user={user} /> : <Navigate to="/login" />} />

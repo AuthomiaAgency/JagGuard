@@ -52,8 +52,12 @@ function Editor() {
   const { t } = useLanguage();
   const [groups, setGroups] = useState<any[]>([]);
   const [guides, setGuides] = useState<any[]>([]);
-  const [activeView, setActiveView] = useState<'groups' | 'guides'>('groups');
+  const [activeView, setActiveView] = useState<'groups' | 'guides' | 'personalization'>('groups');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const quillRef = useRef<any>(null);
+
+  // Personalization State
+  const [defaultTheme, setDefaultTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   // Group Form State
   const [editingGroup, setEditingGroup] = useState<any>(null);
@@ -267,6 +271,12 @@ function Editor() {
           >
             {t('editor.guides')}
           </button>
+          <button 
+            onClick={() => setActiveView('personalization')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === 'personalization' ? 'bg-white dark:bg-surface-dark text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+          >
+            Personalización
+          </button>
         </div>
       </div>
 
@@ -370,6 +380,49 @@ function Editor() {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      ) : activeView === 'personalization' ? (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-surface-dark p-8 rounded-[2.5rem] border border-slate-200 dark:border-surface-lighter shadow-xl space-y-6">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+              <LayoutTemplate className="w-6 h-6 text-primary" />
+              Personalización del Sitio
+            </h2>
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Tema Predeterminado</h3>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    setDefaultTheme('light');
+                    localStorage.setItem('theme', 'light');
+                    document.documentElement.classList.remove('dark');
+                    toast.success('Tema claro establecido como predeterminado');
+                  }}
+                  className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${defaultTheme === 'light' ? 'border-primary bg-primary/5' : 'border-slate-200 dark:border-surface-lighter hover:border-primary/50'}`}
+                >
+                  <div className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-yellow-500">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white">Claro</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setDefaultTheme('dark');
+                    localStorage.setItem('theme', 'dark');
+                    document.documentElement.classList.add('dark');
+                    toast.success('Tema oscuro establecido como predeterminado');
+                  }}
+                  className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${defaultTheme === 'dark' ? 'border-primary bg-primary/5' : 'border-slate-200 dark:border-surface-lighter hover:border-primary/50'}`}
+                >
+                  <div className="w-12 h-12 bg-slate-900 rounded-full shadow-md flex items-center justify-center text-blue-400">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white">Oscuro</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -543,7 +596,15 @@ function Editor() {
                       <button 
                         onClick={() => {
                           const url = prompt(t('editor.add_video_url'));
-                          if (url) setGuideContent(prev => prev + `<p><iframe src="${url}" width="100%" height="315" frameborder="0" allowfullscreen></iframe></p>`);
+                          if (url) {
+                            const editor = quillRef.current?.getEditor();
+                            const range = editor?.getSelection(true);
+                            if (editor && range) {
+                              editor.insertEmbed(range.index, 'video', url);
+                            } else {
+                              setGuideContent(prev => prev + `<p><iframe src="${url}" width="100%" height="315" frameborder="0" allowfullscreen></iframe></p>`);
+                            }
+                          }
                         }}
                         className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
                         title={t('editor.add_video_url')}
@@ -553,7 +614,15 @@ function Editor() {
                       <button 
                         onClick={() => {
                           const url = prompt(t('editor.add_image_url'));
-                          if (url) setGuideContent(prev => prev + `<p><img src="${url}" alt="Image" /></p>`);
+                          if (url) {
+                            const editor = quillRef.current?.getEditor();
+                            const range = editor?.getSelection(true);
+                            if (editor && range) {
+                              editor.insertEmbed(range.index, 'image', url);
+                            } else {
+                              setGuideContent(prev => prev + `<p><img src="${url}" alt="Image" /></p>`);
+                            }
+                          }
                         }}
                         className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
                         title={t('editor.add_image_url')}
@@ -565,7 +634,15 @@ function Editor() {
                           const text = prompt('Texto del botón (ej: Ver Video Completo):');
                           if (text) {
                             const url = prompt(t('editor.add_link'));
-                            if (url) setGuideContent(prev => prev + `<p class="text-center"><a href="${url}" target="_blank" class="btn-link">${text}</a></p>`);
+                            if (url) {
+                              const editor = quillRef.current?.getEditor();
+                              const range = editor?.getSelection(true);
+                              if (editor && range) {
+                                editor.insertText(range.index, text, 'link', url);
+                              } else {
+                                setGuideContent(prev => prev + `<p class="text-center"><a href="${url}" target="_blank" class="btn-link">${text}</a></p>`);
+                              }
+                            }
                           }
                         }}
                         className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
@@ -576,23 +653,29 @@ function Editor() {
                     </div>
                   </div>
                   <div className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-200 dark:border-surface-lighter h-[400px] flex flex-col">
-                    <ReactQuill 
-                      theme="snow" 
-                      value={guideContent} 
-                      onChange={setGuideContent}
-                      className="flex-1 overflow-y-auto dark:text-white prose-custom"
-                      modules={{
-                        toolbar: [
-                          [{ 'header': [1, 2, 3, false] }],
-                          ['bold', 'italic', 'underline', 'strike'],
-                          [{ 'align': [] }],
-                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                          ['blockquote', 'code-block'],
-                          ['link', 'image', 'video'],
-                          ['clean']
-                        ],
-                      }}
-                    />
+                    {(() => {
+                      const ReactQuillAny = ReactQuill as any;
+                      return (
+                        <ReactQuillAny
+                          ref={quillRef}
+                          theme="snow" 
+                          value={guideContent} 
+                          onChange={setGuideContent}
+                          className="flex-1 overflow-y-auto dark:text-white prose-custom"
+                          modules={{
+                            toolbar: [
+                              [{ 'header': [1, 2, 3, false] }],
+                              ['bold', 'italic', 'underline', 'strike'],
+                              [{ 'align': [] }],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['blockquote', 'code-block'],
+                              ['link', 'image', 'video'],
+                              ['clean']
+                            ],
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                   <div className="flex gap-3 pt-4">
                     {editingGuide && (
@@ -618,7 +701,7 @@ function Editor() {
           </div>
 
           {/* Guides Table */}
-          <div className="space-y-4">
+          <div className="space-y-4" id="guides-table">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('editor.guides')}</h2>
             <div className="bg-white dark:bg-surface-dark rounded-3xl border border-slate-200 dark:border-surface-lighter shadow-sm overflow-hidden">
               <div className="overflow-x-auto">

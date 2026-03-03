@@ -5,12 +5,12 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #f48c25;
-  --color-primary-dark: #d9771a;
-  --color-background-light: #f8f7f5;
-  --color-background-dark: #0D0E12;
-  --color-surface-dark: #1A1D26;
-  --color-surface-lighter: #252A36;
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-background-light: #ffffff;
+  --color-background-dark: #000000;
+  --color-surface-dark: #121212;
+  --color-surface-lighter: #1E1E1E;
 }
 
 @layer base {
@@ -29,5 +29,210 @@
 
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* Custom Prose Styles for Learning Content */
+.prose-custom {
+  @apply text-slate-700 dark:text-slate-300 leading-relaxed;
+}
+
+.prose-custom h1 { @apply text-2xl font-black mt-8 mb-4 text-slate-900 dark:text-white tracking-tight; }
+.prose-custom h2 { @apply text-xl font-bold mt-6 mb-3 text-slate-900 dark:text-white tracking-tight; }
+.prose-custom h3 { @apply text-lg font-bold mt-4 mb-2 text-slate-900 dark:text-white tracking-tight; }
+.prose-custom p { @apply mb-4; }
+
+/* Aesthetic Numbered Lists - Circles */
+.prose-custom ol {
+  @apply space-y-6 my-6 list-none pl-0;
+  counter-reset: custom-counter;
+}
+
+.prose-custom ol li {
+  @apply relative pl-14 min-h-[40px] flex flex-col justify-center;
+  counter-increment: custom-counter;
+}
+
+.prose-custom ol li::before {
+  content: counter(custom-counter);
+  @apply absolute left-0 top-0 w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center font-black text-lg shadow-lg shadow-black/10 dark:shadow-white/5 border-4 border-white dark:border-surface-dark transition-all duration-300;
+}
+
+.prose-custom ol li:hover::before {
+  @apply scale-110 -rotate-6 bg-primary text-white;
+}
+
+/* Nature-themed Bullet Lists */
+.prose-custom ul {
+  @apply space-y-4 my-6 list-none pl-0;
+}
+
+.prose-custom ul li {
+  @apply relative pl-10 flex items-start;
+}
+
+.prose-custom ul li::before {
+  content: "";
+  @apply absolute left-0 top-1 w-7 h-7 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center shadow-sm;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'%3E%3C/path%3E%3Cpath d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Blockquotes */
+.prose-custom blockquote {
+  @apply border-l-4 border-primary bg-primary/5 dark:bg-primary/10 px-6 py-4 rounded-r-2xl italic my-6 text-slate-800 dark:text-slate-200 font-medium;
+}
+
+/* Images in content */
+.prose-custom img {
+  @apply rounded-3xl shadow-xl my-8 border-4 border-white dark:border-surface-lighter transition-transform hover:scale-[1.02] duration-500;
+}
+
+/* Links as Buttons */
+.prose-custom a {
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 no-underline my-4;
+}
+
+.prose-custom a::after {
+  content: '';
+  @apply w-4 h-4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpolyline points='15 3 21 3 21 9'%3E%3C/polyline%3E%3Cline x1='10' y1='14' x2='21' y2='3'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Videos and Iframes */
+.prose-custom iframe, .prose-custom video {
+  @apply w-full aspect-video rounded-3xl border-4 border-white dark:border-surface-lighter shadow-2xl my-8 overflow-hidden bg-black;
+}
+
+/* ReactQuill Editor Customization */
+.ql-container {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1rem !important;
+}
+
+.ql-editor {
+  padding: 2rem !important;
+  min-height: 400px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Inherit prose-custom styles in editor */
+.ql-editor h1 { @apply text-2xl font-black mt-8 mb-4 text-slate-900 dark:text-white tracking-tight; }
+.ql-editor h2 { @apply text-xl font-bold mt-6 mb-3 text-slate-900 dark:text-white tracking-tight; }
+.ql-editor h3 { @apply text-lg font-bold mt-4 mb-2 text-slate-900 dark:text-white tracking-tight; }
+.ql-editor p { @apply mb-4 leading-relaxed text-slate-700 dark:text-slate-300; }
+
+/* Override Quill's default list styles */
+.ql-editor ol, .ql-editor ul {
+  padding-left: 0 !important;
+}
+
+.ql-editor ol li, .ql-editor ul li {
+  padding-left: 0 !important;
+}
+
+.ql-editor ol li::before, .ql-editor ul li::before {
+  display: none !important; /* Hide Quill's default markers */
+}
+
+/* Custom Numbered Lists - Swapped to fix user issue */
+.ql-editor ul {
+  @apply space-y-6 my-6 list-none;
+  counter-reset: custom-counter;
+}
+
+.ql-editor ul > li {
+  @apply relative min-h-[40px];
+  padding-left: 4rem !important;
+  counter-increment: custom-counter;
+  display: block; /* Ensure block layout for wrapping */
+}
+
+.ql-editor ul > li::after {
+  content: counter(custom-counter);
+  @apply absolute left-0 top-0 w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center font-black text-lg shadow-lg shadow-black/10 dark:shadow-white/5 border-4 border-white dark:border-surface-dark transition-all duration-300 z-10;
+}
+
+/* Custom Bullet Lists - Swapped to fix user issue */
+.ql-editor ol {
+  @apply space-y-4 my-6 list-none;
+}
+
+.ql-editor ol > li {
+  @apply relative;
+  padding-left: 3rem !important;
+  display: block; /* Ensure block layout for wrapping */
+}
+
+.ql-editor ol > li::after {
+  content: "";
+  @apply absolute left-0 top-1 w-7 h-7 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center shadow-sm z-10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'%3E%3C/path%3E%3Cpath d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.ql-editor blockquote {
+  @apply border-l-4 border-primary bg-primary/5 dark:bg-primary/10 px-6 py-4 rounded-r-2xl italic my-6 text-slate-800 dark:text-slate-200 font-medium;
+}
+
+.ql-editor img {
+  @apply rounded-3xl shadow-xl my-8 border-4 border-white dark:border-surface-lighter transition-transform hover:scale-[1.02] duration-500 max-w-full h-auto block mx-auto;
+}
+
+.ql-editor iframe, .ql-editor video {
+  @apply w-full aspect-video rounded-3xl border-4 border-white dark:border-surface-lighter shadow-2xl my-8 overflow-hidden bg-black block mx-auto;
+}
+
+/* Custom Link Button Style in Editor */
+.ql-editor .btn-link {
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 no-underline my-4 mx-auto block w-fit;
+}
+
+.ql-editor .btn-link::after {
+  content: '';
+  @apply w-4 h-4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpolyline points='15 3 21 3 21 9'%3E%3C/polyline%3E%3Cline x1='10' y1='14' x2='21' y2='3'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Toolbar Customization */
+.ql-toolbar {
+  @apply border-slate-200 dark:border-surface-lighter bg-slate-50 dark:bg-surface-lighter/50 rounded-t-2xl px-4 py-3;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+.ql-container {
+  @apply border-none;
+}
+
+.ql-stroke {
+  @apply stroke-slate-500 dark:stroke-slate-400;
+}
+
+.ql-fill {
+  @apply fill-slate-500 dark:fill-slate-400;
+}
+
+.ql-picker {
+  @apply text-slate-500 dark:text-slate-400;
+}
+
+.ql-picker-options {
+  @apply bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-lighter rounded-xl shadow-xl;
+}
+
+.ql-picker-item {
+  @apply text-slate-600 dark:text-slate-300;
+}
+
+.ql-picker-item:hover {
+  @apply text-primary;
 }
 

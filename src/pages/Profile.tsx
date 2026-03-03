@@ -65,7 +65,8 @@ export default function Profile({ user, setUser, onReplayOnboarding }: { user: a
     }
   }, [user?.id]);
 
-  const progress = Math.min(((user?.points || 0) / 150) * 100, 100);
+  const userPoints = Number(user?.points) || 0;
+  const progress = Math.min((userPoints / 150) * 100, 100);
 
   const [showRedeemConfirm, setShowRedeemConfirm] = useState(false);
   const [showRedeemSuccess, setShowRedeemSuccess] = useState(false);

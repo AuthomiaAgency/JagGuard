@@ -10,92 +10,6 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
   const slides = [
     {
       id: 1,
-      title: t('onboarding.slide3_title'),
-      description: t('onboarding.slide3_desc'),
-      visual: (
-        <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner flex flex-col items-center justify-center p-6">
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="absolute top-6 right-6 flex items-center gap-2 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 dark:border-red-500/30"
-          >
-            <WifiOff className="w-3.5 h-3.5" /> {t('onboarding.offline_label')}
-          </motion.div>
-          
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="w-full bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-lg border border-slate-200 dark:border-surface-lighter mt-8"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-orange-500">
-                <PawPrint className="w-5 h-5" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-                <div className="h-2 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-surface-lighter">
-              <span className="text-xs font-medium text-slate-500">{t('onboarding.saved_label')}</span>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 1, type: "spring" }}
-              >
-                <CheckCircle className="w-5 h-5 text-emerald-500" />
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      )
-    },
-    {
-      id: 3,
-      title: t('onboarding.slide2_title'),
-      description: t('onboarding.slide2_desc'),
-      visual: (
-        <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner">
-          <div className="absolute inset-0 opacity-60 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
-          <div className="absolute inset-0 bg-black/30"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-            <motion.div 
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center shadow-xl shadow-primary/40 border-4 border-white/20"
-            >
-              <MapPin className="w-8 h-8" />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="mt-4 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-white/20 text-xs font-mono font-bold text-slate-800 dark:text-white"
-            >
-              -12.0464, -77.0428
-            </motion.div>
-          </div>
-          <motion.div 
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            transition={{ delay: 0.8, type: "spring" }}
-            className="absolute bottom-6 left-6 right-6 bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-xl border border-slate-200 dark:border-surface-lighter flex items-center gap-4"
-          >
-            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
-              <Camera className="w-6 h-6" />
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="h-2.5 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-              <div className="h-2 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-            </div>
-          </motion.div>
-        </div>
-      )
-    },
-    {
-      id: 2,
       title: t('onboarding.slide1_title'),
       description: t('onboarding.slide1_desc'),
       visual: (
@@ -143,7 +57,131 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
       )
     },
     {
+      id: 2,
+      title: t('onboarding.slide2_title'),
+      description: t('onboarding.slide2_desc'),
+      visual: (
+        <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className="absolute inset-0 opacity-60 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+          <div className="absolute inset-0 bg-black/30"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+            <motion.div 
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center shadow-xl shadow-primary/40 border-4 border-white/20"
+            >
+              <MapPin className="w-8 h-8" />
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-4 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-white/20 text-xs font-mono font-bold text-slate-800 dark:text-white"
+            >
+              -16.2902, -63.5887
+            </motion.div>
+          </div>
+          <motion.div 
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            transition={{ delay: 0.8, type: "spring" }}
+            className="absolute bottom-6 left-6 right-6 bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-xl border border-slate-200 dark:border-surface-lighter flex items-center gap-4"
+          >
+            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="h-2.5 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+              <div className="h-2 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+            </div>
+          </motion.div>
+        </div>
+      )
+    },
+    {
+      id: 3,
+      title: t('onboarding.slide_tracks_title'),
+      description: t('onboarding.slide_tracks_desc'),
+      visual: (
+        <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner flex flex-col items-center justify-center p-6">
+          <div className="relative w-full aspect-video bg-slate-200 dark:bg-slate-900 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-lg">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1590418606746-018840f9cd0f?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center opacity-80"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div 
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="relative"
+              >
+                <div className="w-24 h-24 border-4 border-dashed border-white/60 rounded-full flex items-center justify-center">
+                  <PawPrint className="w-12 h-12 text-white/80" />
+                </div>
+                <motion.div 
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 1, duration: 0.8 }}
+                  className="absolute -right-12 -bottom-4"
+                >
+                  <div className="w-20 h-28 bg-orange-200/40 backdrop-blur-sm border-2 border-white/40 rounded-t-full rounded-b-2xl flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white uppercase tracking-tighter rotate-90">Referencia</span>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
+            <CheckCircle className="w-4 h-4" />
+            Referencia Visual
+          </div>
+        </div>
+      )
+    },
+    {
       id: 4,
+      title: t('onboarding.slide3_title'),
+      description: t('onboarding.slide3_desc'),
+      visual: (
+        <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner flex flex-col items-center justify-center p-6">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="absolute top-6 right-6 flex items-center gap-2 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 dark:border-red-500/30"
+          >
+            <WifiOff className="w-3.5 h-3.5" /> {t('onboarding.offline_label')}
+          </motion.div>
+          
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="w-full bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-lg border border-slate-200 dark:border-surface-lighter mt-8"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-orange-500">
+                <PawPrint className="w-5 h-5" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                <div className="h-2 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-surface-lighter">
+              <span className="text-xs font-medium text-slate-500">{t('onboarding.saved_label')}</span>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 1, type: "spring" }}
+              >
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      )
+    },
+    {
+      id: 5,
       title: t('onboarding.slide4_title'),
       description: t('onboarding.slide4_desc'),
       visual: (

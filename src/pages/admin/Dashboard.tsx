@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield, MessageCircle, PlayCircle } from 'lucide-react';
+import { FileText, Download, CheckCircle, XCircle, Plus, Image as ImageIcon, Eye, AlertTriangle, Info, Map as MapIcon, Camera, Leaf, Zap, Heart, BookOpen, LayoutTemplate, ListOrdered, Copy, PawPrint, Shield, MessageCircle, PlayCircle, Video, Link as LinkIcon, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -13,7 +13,7 @@ import { toPng, toBlob } from 'html-to-image';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy, deleteDoc, increment } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy, deleteDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const AVAILABLE_ICONS = [
@@ -251,21 +251,21 @@ function Editor() {
     <div className="p-5 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Editor de Contenidos</h1>
-          <p className="text-sm text-slate-500">Gestiona grupos y publicaciones para la sección Aprende.</p>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('editor.title')}</h1>
+          <p className="text-sm text-slate-500">{t('learn.subtitle')}</p>
         </div>
         <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
           <button 
             onClick={() => setActiveView('groups')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === 'groups' ? 'bg-white dark:bg-surface-dark text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
           >
-            Grupos
+            {t('editor.groups')}
           </button>
           <button 
             onClick={() => setActiveView('guides')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === 'guides' ? 'bg-white dark:bg-surface-dark text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
           >
-            Publicaciones
+            {t('editor.guides')}
           </button>
         </div>
       </div>
@@ -277,11 +277,11 @@ function Editor() {
             <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl border border-slate-200 dark:border-surface-lighter shadow-sm space-y-4">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <LayoutTemplate className="w-5 h-5 text-primary" />
-                {editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'}
+                {editingGroup ? t('editor.edit_group') : t('editor.create_group')}
               </h2>
               
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nombre del Grupo</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.group_name')}</label>
                 <input 
                   type="text" 
                   value={groupName}
@@ -292,7 +292,7 @@ function Editor() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Icono Representativo</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.group_icon')}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {AVAILABLE_ICONS.map(i => (
                     <button 
@@ -313,7 +313,7 @@ function Editor() {
                     onClick={() => { setEditingGroup(null); setGroupName(''); setGroupIcon('paw'); }}
                     className="flex-1 py-3 rounded-xl text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors"
                   >
-                    Cancelar
+                    {t('editor.cancel')}
                   </button>
                 )}
                 <button 
@@ -322,7 +322,7 @@ function Editor() {
                   className="flex-[2] bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
                   {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-                  {editingGroup ? 'Actualizar' : 'Crear Grupo'}
+                  {editingGroup ? t('editor.save') : t('editor.create_group')}
                 </button>
               </div>
             </div>
@@ -330,12 +330,12 @@ function Editor() {
 
           {/* Groups List */}
           <div className="md:col-span-2 space-y-4">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Grupos Existentes ({groups.length})</h2>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('editor.groups')} ({groups.length})</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {groups.length === 0 ? (
                 <div className="sm:col-span-2 py-12 text-center bg-white dark:bg-surface-dark rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
                   <LayoutTemplate className="w-12 h-12 mx-auto mb-3 opacity-10" />
-                  <p className="text-slate-400 text-sm">No hay grupos creados aún.</p>
+                  <p className="text-slate-400 text-sm">{t('editor.no_groups')}</p>
                 </div>
               ) : (
                 groups.map(group => {
@@ -349,7 +349,7 @@ function Editor() {
                         </div>
                         <div>
                           <h3 className="font-bold text-slate-900 dark:text-white text-sm">{group.name}</h3>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{count} Publicaciones</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{count} {t('editor.guides')}</p>
                         </div>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -377,19 +377,19 @@ function Editor() {
         <div className="space-y-6">
           {/* Guide Form */}
           <div className="bg-white dark:bg-surface-dark p-8 rounded-[2.5rem] border border-slate-200 dark:border-surface-lighter shadow-xl space-y-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-500 to-yellow-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-emerald-500 to-teal-500"></div>
             
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                 <BookOpen className="w-6 h-6 text-primary" />
-                {editingGuide ? 'Editar Publicación' : 'Nueva Publicación'}
+                {editingGuide ? t('editor.edit_guide') : t('editor.create_guide')}
               </h2>
               <button 
                 onClick={() => setIsPreviewMode(!isPreviewMode)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${isPreviewMode ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
               >
-                <Eye className="w-4 h-4" />
-                {isPreviewMode ? 'Cerrar Vista Previa' : 'Ver Vista Previa'}
+                {isPreviewMode ? <FileText className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {isPreviewMode ? t('editor.edit') : t('editor.preview')}
               </button>
             </div>
 
@@ -412,7 +412,7 @@ function Editor() {
                   <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-surface-lighter">
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-4">{guideTitle || 'Título de la Publicación'}</h1>
                     <div 
-                      className="prose dark:prose-invert prose-sm max-w-none prose-headings:font-bold prose-h2:text-primary prose-a:text-primary prose-img:rounded-xl"
+                      className="prose-custom max-w-none"
                       dangerouslySetInnerHTML={{ __html: guideContent || '<p className="text-slate-400 italic">Sin contenido aún...</p>' }}
                     />
                     
@@ -442,7 +442,7 @@ function Editor() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Título</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_title')}</label>
                     <input 
                       type="text" 
                       value={guideTitle}
@@ -452,7 +452,7 @@ function Editor() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Subtítulo / Resumen</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_subtitle')}</label>
                     <textarea 
                       value={guideSubtitle}
                       onChange={(e) => setGuideSubtitle(e.target.value)}
@@ -462,23 +462,23 @@ function Editor() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Grupo / Categoría</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_group')}</label>
                       <select 
                         value={guideGroup}
                         onChange={(e) => setGuideGroup(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all appearance-none"
                       >
-                        <option value="">Seleccionar Grupo</option>
+                        <option value="">{t('editor.guide_group')}</option>
                         {groups.map(g => (
                           <option key={g.id} value={g.name}>{g.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tiempo de Lectura (min)</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_read_time')}</label>
                       <input 
                         type="number" 
-                        value={guideReadTime}
+                        value={isNaN(guideReadTime) ? '' : guideReadTime}
                         onChange={(e) => setGuideReadTime(parseInt(e.target.value))}
                         className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-surface-lighter rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
                       />
@@ -486,7 +486,7 @@ function Editor() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">URL Imagen de Portada</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_image')}</label>
                       <div className="relative">
                         <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input 
@@ -499,7 +499,7 @@ function Editor() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">URL Video (Opcional)</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_video')}</label>
                       <div className="relative">
                         <PlayCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input 
@@ -514,11 +514,11 @@ function Editor() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Archivos Adjuntos (PDF, DOCX)</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.add_file')}</label>
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold text-slate-500">
-                          <Plus className="w-4 h-4" /> Subir Archivo
+                          <Plus className="w-4 h-4" /> {t('editor.add_file')}
                           <input type="file" className="hidden" onChange={handleFileUpload} />
                         </label>
                       </div>
@@ -537,18 +537,57 @@ function Editor() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Contenido de la Publicación</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('editor.guide_content')}</label>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const url = prompt(t('editor.add_video_url'));
+                          if (url) setGuideContent(prev => prev + `<p><iframe src="${url}" width="100%" height="315" frameborder="0" allowfullscreen></iframe></p>`);
+                        }}
+                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                        title={t('editor.add_video_url')}
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const url = prompt(t('editor.add_image_url'));
+                          if (url) setGuideContent(prev => prev + `<p><img src="${url}" alt="Image" /></p>`);
+                        }}
+                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                        title={t('editor.add_image_url')}
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const text = prompt('Texto del botón (ej: Ver Video Completo):');
+                          if (text) {
+                            const url = prompt(t('editor.add_link'));
+                            if (url) setGuideContent(prev => prev + `<p class="text-center"><a href="${url}" target="_blank" class="btn-link">${text}</a></p>`);
+                          }
+                        }}
+                        className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-colors"
+                        title={t('editor.add_link')}
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                   <div className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-200 dark:border-surface-lighter h-[400px] flex flex-col">
                     <ReactQuill 
                       theme="snow" 
                       value={guideContent} 
                       onChange={setGuideContent}
-                      className="flex-1 overflow-y-auto dark:text-white"
+                      className="flex-1 overflow-y-auto dark:text-white prose-custom"
                       modules={{
                         toolbar: [
                           [{ 'header': [1, 2, 3, false] }],
                           ['bold', 'italic', 'underline', 'strike'],
+                          [{ 'align': [] }],
                           [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          ['blockquote', 'code-block'],
                           ['link', 'image', 'video'],
                           ['clean']
                         ],
@@ -561,16 +600,16 @@ function Editor() {
                         onClick={resetGuideForm}
                         className="flex-1 py-4 rounded-2xl text-sm font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors"
                       >
-                        Cancelar
+                        {t('editor.cancel')}
                       </button>
                     )}
                     <button 
                       onClick={handleSaveGuide}
                       disabled={isSaving}
-                      className="flex-[2] bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-base"
+                      className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-base"
                     >
                       {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                      {editingGuide ? 'Actualizar Publicación' : 'Publicar Ahora'}
+                      {editingGuide ? t('editor.edit_guide') : t('editor.publish')}
                     </button>
                   </div>
                 </div>
@@ -580,23 +619,23 @@ function Editor() {
 
           {/* Guides Table */}
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Publicaciones Recientes</h2>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('editor.guides')}</h2>
             <div className="bg-white dark:bg-surface-dark rounded-3xl border border-slate-200 dark:border-surface-lighter shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-surface-lighter border-b border-slate-200 dark:border-slate-700">
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Publicación</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Grupo</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guides')}</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('editor.guide_group')}</th>
                       <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Media</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Acciones</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('admin.date')}</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">{t('admin.user_management')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {guides.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">No hay publicaciones aún.</td>
+                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">{t('editor.no_guides')}</td>
                       </tr>
                     ) : (
                       guides.map(guide => (
@@ -607,8 +646,8 @@ function Editor() {
                                 {guide.image_url ? <img src={guide.image_url} className="w-full h-full object-cover" /> : <FileText className="w-5 h-5 m-2.5 text-slate-400" />}
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">{guide.title}</p>
-                                <p className="text-[10px] text-slate-500">{guide.read_time} min lectura</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">{guide.title}</p>
+                                <p className="text-[10px] text-slate-500">{guide.read_time} {t('learn.read_time').replace('{time}', '')}</p>
                               </div>
                             </div>
                           </td>
@@ -619,9 +658,9 @@ function Editor() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-1.5">
-                              {guide.image_url && <ImageIcon className="w-3.5 h-3.5 text-blue-500" title="Imagen" />}
-                              {guide.video_url && <PlayCircle className="w-3.5 h-3.5 text-red-500" title="Video" />}
-                              {guide.files?.length > 0 && <FileText className="w-3.5 h-3.5 text-emerald-500" title={`${guide.files.length} Archivos`} />}
+                              {guide.image_url && <ImageIcon className="w-3.5 h-3.5 text-primary" title="Imagen" />}
+                              {guide.video_url && <PlayCircle className="w-3.5 h-3.5 text-primary" title="Video" />}
+                              {guide.files?.length > 0 && <FileText className="w-3.5 h-3.5 text-primary" title={`${guide.files.length} Archivos`} />}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-[10px] text-slate-500 font-medium">
@@ -631,7 +670,7 @@ function Editor() {
                             <div className="flex justify-end gap-2">
                               <button 
                                 onClick={() => handleEditGuide(guide)}
-                                className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors"
+                                className="p-2 text-primary hover:bg-primary/10 dark:hover:bg-primary/20 rounded-xl transition-colors"
                               >
                                 <LayoutTemplate className="w-4 h-4" />
                               </button>
@@ -871,9 +910,28 @@ function DashboardHome() {
         await updateDoc(reportRef, { status });
         
         if (report?.user_id) {
-          const userRef = doc(db, 'users', report.user_id);
-          await updateDoc(userRef, { points: increment(10) }); // Add 10 points for verified report
-          toast.success('Reporte verificado y puntos asignados (+10)');
+          try {
+            const userRef = doc(db, 'users', report.user_id);
+            const userSnap = await getDoc(userRef);
+            
+            if (userSnap.exists()) {
+              await updateDoc(userRef, { points: increment(10) });
+              toast.success('Reporte verificado y puntos asignados (+10)');
+            } else {
+              // If user document doesn't exist, create it with info from report
+              await setDoc(userRef, {
+                name: report.user_name || 'Usuario',
+                contact: report.user_contact || '',
+                points: 10,
+                role: 'user',
+                created_at: new Date().toISOString()
+              });
+              toast.success('Reporte verificado y perfil de usuario creado (+10)');
+            }
+          } catch (userError) {
+            console.error("Error updating user points", userError);
+            toast.success('Reporte verificado (error al asignar puntos)');
+          }
         } else {
           toast.success('Reporte verificado (sin usuario asociado)');
         }
@@ -913,16 +971,19 @@ function DashboardHome() {
       return;
     }
 
-    const exportData = dataToExport.map(r => ({
-      'TIPO DE REPORTE': r.type.toUpperCase(),
-      'FECHA Y HORA': new Date(r.created_at).toLocaleString(),
-      'COORDENADAS EXACTAS': `${r.lat}, ${r.lng}`,
-      'ANIMAL': r.animal === 'otros' && r.specific_animal ? `${t('report.other')}: ${r.specific_animal.toUpperCase()}` : t(`report.${r.animal}`).toUpperCase(),
-      'SITUACIÓN / NOTAS': r.notes || 'N/A',
-      'ENLACE DE EVIDENCIA': r.photo_url ? { t: 's', v: 'Ver Imagen', l: { Target: r.photo_url } } : 'Sin foto',
-      'CONTACTO DE USUARIO': r.anonymous ? t('admin.anonymous') : `${r.user_name || 'N/A'}`,
-      'ESTADO': r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
-    }));
+    const exportData = dataToExport.map(r => {
+      const isBase64 = r.photo_url?.startsWith('data:image');
+      return {
+        'TIPO DE REPORTE': r.type.toUpperCase(),
+        'FECHA Y HORA': new Date(r.created_at).toLocaleString(),
+        'COORDENADAS EXACTAS': `${r.lat}, ${r.lng}`,
+        'ANIMAL': r.animal === 'otros' && r.specific_animal ? `${t('report.other')}: ${r.specific_animal.toUpperCase()}` : t(`report.${r.animal}`).toUpperCase(),
+        'SITUACIÓN / NOTAS': r.notes || 'N/A',
+        'EVIDENCIA': isBase64 ? 'IMAGEN_BASE64 (Ver en App)' : (r.photo_url || 'Sin foto'),
+        'CONTACTO DE USUARIO': r.anonymous ? t('admin.anonymous') : `${r.user_name || 'N/A'}`,
+        'ESTADO': r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     
@@ -1040,7 +1101,7 @@ function DashboardHome() {
   };
 
   const heatmapPoints: [number, number, number][] = allReports
-    .filter(r => r.lat && r.lng)
+    .filter(r => r.lat && r.lng && !isNaN(Number(r.lat)) && !isNaN(Number(r.lng)))
     .map(r => [Number(r.lat), Number(r.lng), 1]);
 
   const displayReports = activeTab === 'recientes' 
@@ -1134,10 +1195,10 @@ service cloud.firestore {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div 
             onClick={() => { setActiveTab('totales'); openDetailsModal('reports'); }}
-            className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'totales' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-500' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-blue-300'}`}
+            className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'totales' ? 'bg-primary/5 dark:bg-primary/10 border-primary' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-primary/50'}`}
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg">
+              <div className="p-1.5 bg-primary/10 dark:bg-primary/20 text-primary rounded-lg">
                 <FileText className="w-4 h-4" />
               </div>
               <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">{t('admin.total_reports')}</h3>
@@ -1158,10 +1219,10 @@ service cloud.firestore {
           </div>
           <div 
             onClick={() => { setActiveTab('canjes'); openDetailsModal('redemptions'); }}
-            className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'canjes' ? 'bg-orange-50 dark:bg-orange-500/10 border-orange-500' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-orange-300'}`}
+            className={`cursor-pointer p-4 rounded-2xl border transition-all shadow-sm ${activeTab === 'canjes' ? 'bg-primary/5 dark:bg-primary/10 border-primary' : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-surface-lighter hover:border-primary/50'}`}
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-lg">
+              <div className="p-1.5 bg-primary/10 dark:bg-primary/20 text-primary rounded-lg">
                 <Heart className="w-4 h-4" />
               </div>
               <h3 className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">{t('admin.pending_redemptions')}</h3>

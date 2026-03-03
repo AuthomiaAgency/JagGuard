@@ -40,21 +40,37 @@ function LocationMarker({ position, setPosition }: { position: any, setPosition:
 
 function LocateControl({ setLocation }: { setLocation: (loc: { lat: number, lng: number }) => void }) {
   const map = useMap();
+  const [isLocating, setIsLocating] = useState(false);
 
   const handleLocate = () => {
-    map.locate().on("locationfound", function (e) {
-      setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-      map.flyTo(e.latlng, map.getZoom());
-    });
+    setIsLocating(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(newLoc);
+          map.flyTo([newLoc.lat, newLoc.lng], 16);
+          setIsLocating(false);
+        },
+        (err) => {
+          console.error("Error getting location", err);
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setIsLocating(false);
+    }
   };
 
   return (
     <button
       type="button"
       onClick={handleLocate}
-      className="absolute bottom-4 right-4 bg-white dark:bg-surface-dark p-3 rounded-full shadow-lg z-[1000] border border-slate-200 dark:border-surface-lighter hover:bg-slate-50 dark:hover:bg-surface-lighter transition-all active:scale-95"
+      disabled={isLocating}
+      className="absolute bottom-6 right-6 bg-white dark:bg-surface-dark p-4 rounded-full shadow-2xl z-[1000] border border-slate-200 dark:border-surface-lighter hover:bg-slate-50 dark:hover:bg-surface-lighter transition-all active:scale-95 disabled:opacity-50 group"
     >
-      <Locate className="w-6 h-6 text-primary" />
+      <Locate className={`w-6 h-6 text-primary ${isLocating ? 'animate-pulse' : 'group-hover:scale-110 transition-transform'}`} />
     </button>
   );
 }
@@ -296,6 +312,12 @@ export default function ReportForm({ user }: { user: any }) {
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark">
       <Header />
       
+      {!isOnline && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-bold animate-pulse">
+          {t('report.offline_warning')}
+        </div>
+      )}
+      
       <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-200 dark:border-surface-lighter sticky top-0 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md z-50">
         <button onClick={() => step === 2 ? setStep(1) : navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-surface-lighter transition-colors">
           <ArrowLeft className="w-5 h-5 text-slate-900 dark:text-white" />
@@ -339,7 +361,7 @@ export default function ReportForm({ user }: { user: any }) {
                     {a.id === 'jaguar' ? (
                       <div className="relative">
                         <PawPrint className="w-12 h-12" strokeWidth={1.5} />
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-white dark:border-surface-dark"></div>
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-white dark:border-surface-dark"></div>
                       </div>
                     ) : a.id === 'puma' ? (
                       <div className="relative">

@@ -180,7 +180,7 @@ export default function GuideDetail({ user }: { user: any }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-24">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-24 overflow-x-hidden">
       {/* Custom Header for Guide Detail */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-surface-lighter px-5 py-4 flex items-center gap-4">
         <button 
@@ -241,9 +241,9 @@ export default function GuideDetail({ user }: { user: any }) {
           </div>
         )}
 
-        <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 border border-slate-200 dark:border-surface-lighter shadow-sm">
+        <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 border border-slate-200 dark:border-surface-lighter shadow-sm overflow-hidden">
           <div 
-            className="prose-custom mb-8"
+            className="prose-custom mb-8 max-w-none w-full"
             dangerouslySetInnerHTML={{ __html: guide.content }}
           />
           

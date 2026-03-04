@@ -604,8 +604,8 @@ function Editor() {
             </div>
 
             {isPreviewMode ? (
-              <div className="bg-slate-50 dark:bg-black/40 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 max-h-[600px] overflow-y-auto">
-                <div className="max-w-2xl mx-auto space-y-6">
+              <div className="bg-slate-50 dark:bg-black/40 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 max-h-[600px] overflow-y-auto overflow-x-hidden">
+                <div className="max-w-2xl mx-auto space-y-6 w-full">
                   {guideImage && (
                     <div className="w-full h-48 rounded-2xl overflow-hidden relative shadow-md">
                       <img src={guideImage} alt="Preview" className="w-full h-full object-cover" />
@@ -619,9 +619,9 @@ function Editor() {
                       </div>
                     </div>
                   )}
-                  <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-surface-lighter">
+                  <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-surface-lighter overflow-hidden w-full">
                     <div 
-                      className="prose-custom max-w-none"
+                      className="prose-custom max-w-none w-full"
                       dangerouslySetInnerHTML={{ __html: guideContent || '<p className="text-slate-400 italic">Sin contenido aún...</p>' }}
                     />
                     

@@ -34,6 +34,10 @@
 /* Custom Prose Styles for Learning Content */
 .prose-custom {
   @apply text-slate-700 dark:text-slate-300 leading-relaxed;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: normal;
+  max-width: 100%;
 }
 
 .prose-custom h1 { @apply text-2xl font-black mt-8 mb-4 text-slate-900 dark:text-white tracking-tight; }
@@ -85,17 +89,17 @@
 
 /* Images in content */
 .prose-custom img {
-  @apply rounded-3xl shadow-xl my-8 border-4 border-white dark:border-surface-lighter transition-transform hover:scale-[1.02] duration-500;
+  @apply rounded-3xl shadow-xl my-8 border-4 border-white dark:border-surface-lighter transition-transform hover:scale-[1.02] duration-500 max-w-full h-auto block mx-auto;
 }
 
 /* Links as Buttons */
 .prose-custom a {
-  @apply inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 no-underline my-4;
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 no-underline my-4 max-w-full break-words;
 }
 
 .prose-custom a::after {
   content: '';
-  @apply w-4 h-4;
+  @apply w-4 h-4 shrink-0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'%3E%3C/path%3E%3Cpolyline points='15 3 21 3 21 9'%3E%3C/polyline%3E%3Cline x1='10' y1='14' x2='21' y2='3'%3E%3C/line%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
@@ -103,7 +107,7 @@
 
 /* Videos and Iframes */
 .prose-custom iframe, .prose-custom video {
-  @apply w-full aspect-video rounded-3xl border-4 border-white dark:border-surface-lighter shadow-2xl my-8 overflow-hidden bg-black;
+  @apply w-full aspect-video rounded-3xl border-4 border-white dark:border-surface-lighter shadow-2xl my-8 overflow-hidden bg-black max-w-full block mx-auto;
 }
 
 /* ReactQuill Editor Customization */
@@ -118,7 +122,7 @@
   max-width: 100%;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  word-break: break-word;
+  word-break: normal;
 }
 
 /* Inherit prose-custom styles in editor */

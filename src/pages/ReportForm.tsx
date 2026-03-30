@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import { db } from '../lib/firebase';
 import { collection, addDoc, updateDoc, doc, increment } from 'firebase/firestore';
 import { useLanguage } from '../contexts/LanguageContext';
+import { handleFirestoreError, OperationType } from '../lib/firestoreError';
 
 // Fix Leaflet icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -233,7 +234,7 @@ export default function ReportForm({ user }: { user: any }) {
         } catch (dbError: any) {
             console.error("Firestore error:", dbError);
             if (dbError.code === 'permission-denied') {
-                throw new Error('PERMISSION_DENIED');
+                handleFirestoreError(dbError, OperationType.CREATE, 'reports');
             }
             // If document is too large or other error, try offline save
             throw dbError;
@@ -247,6 +248,7 @@ export default function ReportForm({ user }: { user: any }) {
           });
         } catch (firestoreError) {
           console.warn("Could not update points in Firestore", firestoreError);
+          // We don't throw here to not block the success message if the report was created
         }
 
         // Update local user state points

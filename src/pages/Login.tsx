@@ -127,8 +127,23 @@ export default function Login({ onLogin }: { onLogin: (user: any, isNewUser?: bo
         };
       }
       
-      if (userCredential.user.email === 'admin@labsnatural.com' || userCredential.user.email === 'authomia.agency@gmail.com') {
+      const adminEmails = [
+        'admin@labsnatural.com',
+        'authomia.agency@gmail.com',
+        'usuario@gmail.com',
+        'luiseduardocerron.ec@gmail.com',
+        'cerronbarrial@gmail.com'
+      ];
+
+      if (userCredential.user.email && adminEmails.includes(userCredential.user.email.toLowerCase())) {
         userData.role = 'admin';
+        // Force update the role in Firestore so the user is truly an admin in the database
+        try {
+          const { setDoc } = await import('firebase/firestore');
+          await setDoc(doc(db, 'users', userCredential.user.uid), { role: 'admin' }, { merge: true });
+        } catch (e) {
+          console.error("Could not update admin role in Firestore", e);
+        }
       }
 
       localStorage.setItem('coex5_user', JSON.stringify(userData));

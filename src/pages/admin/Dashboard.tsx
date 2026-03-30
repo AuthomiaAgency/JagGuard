@@ -15,6 +15,7 @@ import 'react-quill-new/dist/quill.snow.css';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy, deleteDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreError';
 
 const AVAILABLE_ICONS = [
   { id: 'paw', icon: PawPrint, label: 'Huella' },
@@ -152,6 +153,7 @@ function Editor() {
       setGuides(fetchedGuides);
     } catch (error) {
       console.error("Error fetching data", error);
+      handleFirestoreError(error, OperationType.GET, 'groups/guides');
     }
   };
 
@@ -186,6 +188,7 @@ function Editor() {
       fetchData();
     } catch (error) {
       toast.error('Error al guardar grupo');
+      handleFirestoreError(error, editingGroup ? OperationType.UPDATE : OperationType.CREATE, 'groups');
     } finally {
       setIsSaving(false);
     }

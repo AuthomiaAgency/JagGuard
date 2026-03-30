@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contact": { "type": "string" },
+        "points": { "type": "number" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "created_at": { "type": "string" }
+      },
+      "required": ["name", "role"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Wildlife conflict or sighting report",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "animal": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "verified", "denied"] },
+        "user_id": { "type": "string" }
+      },
+      "required": ["type", "animal", "lat", "lng", "status", "user_id"]
+    },
+    "Guide": {
+      "title": "Guide",
+      "description": "Educational guide",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "group": { "type": "string" }
+      },
+      "required": ["title", "content", "group"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Submitted reports"
+    },
+    "/guides/{guideId}": {
+      "schema": { "$ref": "#/entities/Guide" },
+      "description": "Educational guides"
+    }
+  }
+}

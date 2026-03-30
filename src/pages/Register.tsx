@@ -78,13 +78,21 @@ export default function Register({ onLogin }: { onLogin: (user: any, isNewUser?:
 
       const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\s+/g, '')}`;
 
+      const adminEmails = [
+        'admin@labsnatural.com',
+        'authomia.agency@gmail.com',
+        'usuario@gmail.com',
+        'luiseduardocerron.ec@gmail.com',
+        'cerronbarrial@gmail.com'
+      ];
+
       const userData = {
         id: firebaseUser.uid,
         name: name,
         email: email,
         phone: fullPhoneNumber,
         contact: email, // Keep for compatibility
-        role: 'user',
+        role: adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user',
         points: 0,
         avatar: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${firebaseUser.uid}`,
         createdAt: new Date().toISOString()

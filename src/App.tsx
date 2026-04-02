@@ -18,6 +18,7 @@ import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import GuideDetail from './pages/GuideDetail';
+import ReportPhotoView from './pages/ReportPhotoView';
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -223,6 +224,9 @@ export default function App() {
           
           {/* Public Guide Detail Route */}
           <Route path="/learn/:guideId" element={<GuideDetail user={user} />} />
+          
+          {/* Public Photo View Route */}
+          <Route path="/p/:id" element={<ReportPhotoView />} />
 
           {/* Protected User Routes */}
           <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/admin" /> : <Home user={user} />) : <Navigate to="/login" />} />

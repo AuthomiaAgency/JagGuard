@@ -1466,13 +1466,14 @@ function DashboardHome() {
 
     const exportData = dataToExport.map(r => {
       const isBase64 = r.photo_url?.startsWith('data:image');
+      const photoLink = isBase64 ? `${window.location.origin}/p/${r.id}` : (r.photo_url || 'Sin foto');
       return {
         'TIPO DE REPORTE': r.type.toUpperCase(),
         'FECHA Y HORA': new Date(r.created_at).toLocaleString(),
         'COORDENADAS EXACTAS': `${r.lat}, ${r.lng}`,
         'ANIMAL': r.animal === 'otros' && r.specific_animal ? `${t('report.other')}: ${r.specific_animal.toUpperCase()}` : t(`report.${r.animal}`).toUpperCase(),
         'SITUACIÓN / NOTAS': r.notes || 'N/A',
-        'EVIDENCIA': isBase64 ? 'IMAGEN_BASE64 (Ver en App)' : (r.photo_url || 'Sin foto'),
+        'EVIDENCIA': photoLink,
         'CONTACTO DE USUARIO': r.anonymous ? t('admin.anonymous') : `${r.user_name || 'N/A'}`,
         'ESTADO': r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
       };
@@ -1533,16 +1534,20 @@ function DashboardHome() {
 
     const csvContent = [
       headers.join(','),
-      ...dataToExport.map(r => [
-        r.type.toUpperCase(),
-        `"${new Date(r.created_at).toLocaleString()}"`,
-        `"${r.lat}, ${r.lng}"`,
-        r.animal === 'otros' && r.specific_animal ? `"${t('report.other')}: ${r.specific_animal.toUpperCase()}"` : t(`report.${r.animal}`).toUpperCase(),
-        `"${(r.notes || 'N/A').replace(/"/g, '""')}"`,
-        r.photo_url || 'Sin foto',
-        r.anonymous ? t('admin.anonymous') : `"${(r.user_name || 'N/A').replace(/"/g, '""')}"`,
-        r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
-      ].join(','))
+      ...dataToExport.map(r => {
+        const isBase64 = r.photo_url?.startsWith('data:image');
+        const photoLink = isBase64 ? `${window.location.origin}/p/${r.id}` : (r.photo_url || 'Sin foto');
+        return [
+          r.type.toUpperCase(),
+          `"${new Date(r.created_at).toLocaleString()}"`,
+          `"${r.lat}, ${r.lng}"`,
+          r.animal === 'otros' && r.specific_animal ? `"${t('report.other')}: ${r.specific_animal.toUpperCase()}"` : t(`report.${r.animal}`).toUpperCase(),
+          `"${(r.notes || 'N/A').replace(/"/g, '""')}"`,
+          `"${photoLink}"`,
+          r.anonymous ? t('admin.anonymous') : `"${(r.user_name || 'N/A').replace(/"/g, '""')}"`,
+          r.status === 'verified' ? 'VERIFICADO' : r.status === 'denied' ? 'DENEGADO' : 'PENDIENTE'
+        ].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

@@ -147,13 +147,47 @@ flutter build ios --release --dart-define=MAPS_API_KEY=AIza...
 
 ---
 
-## 7. Próximos pasos sugeridos
+## 7. Publicación en Vercel (admin web)
 
-- [ ] API key de Google Maps (único bloqueante para compilar release).
+El workflow **`.github/workflows/deploy-web.yml`** ya está configurado: en cada push a `main` que toque `jaguard_app/`, GitHub Actions compila la web y despliega a Vercel. Configura **4 secrets** en el repo (Settings → Secrets and variables → Actions):
+
+| Secret | Dónde obtenerlo |
+|---|---|
+| `MAPS_JS_API_KEY` | Google Cloud Console → API key con **Maps JavaScript API** habilitada, restringida por dominio HTTP (p. ej. `jaguard.vercel.app/*`) |
+| `VERCEL_TOKEN` | Vercel → Settings → Tokens → Create |
+| `VERCEL_ORG_ID` | Vercel → Settings (del team) → General → Vercel ID |
+| `VERCEL_PROJECT_ID` | Vercel → (proyecto) Settings → General → Project ID |
+
+Si prefieres conectar el repo directamente en Vercel (sin Actions): Framework **Other**, Root Directory `jaguard_app`, Build Command `flutter build web --release` (requiere runtime de Flutter; por eso recomendamos Actions).
+
+### Requisitos de Google Maps por plataforma
+
+| Plataforma | API a habilitar | Dónde va la clave | Restricción recomendada |
+|---|---|---|---|
+| **Android** | Maps SDK for Android | Variable `GMAPS_API_KEY` al compilar (se inyecta en el AndroidManifest) o `--dart-define=MAPS_API_KEY` | App restrictions: `com.authomia.jaguard` + SHA-1 del keystore |
+| **iOS** | Maps SDK for iOS | `GMAPS_API_KEY` como entrada del `Info.plist` (el `AppDelegate.swift` ya la lee) | App restrictions: bundle ID `com.authomia.jaguard` |
+| **Web (admin)** | Maps JavaScript API | Secret `MAPS_JS_API_KEY` (se inyecta en `web/index.html` durante el build) | Website restrictions: dominios de Vercel |
+
+Las tres claves pueden ser la misma API key sin restricciones para pruebas, pero en producción crea **una por plataforma** con su restricción.
+
+### OAuth social (Client ID / Secret) — opcional
+
+Para login con Google además del correo/teléfono:
+
+1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth Client ID** (tipo *Web application*).
+2. Authorized redirect URI: `https://wxrgitoukbowtygfyrel.supabase.co/auth/v1/callback`
+3. Copia el **Client ID** y **Client Secret** → Supabase Dashboard → Authentication → Providers → Google → pégalo y activa.
+4. En la app se usaría `client.signInWithOAuth(OAuthProvider.google)` (añadir en `LoginScreen` cuando lo actives).
+
+> El login actual (correo **o** teléfono + contraseña) funciona sin esto; el OAuth es un añadido.
+
+## 8. Próximos pasos sugeridos
+
+- [x] API de Maps por plataforma (guía arriba).
 - [ ] Confirmación de email en Supabase Auth (hoy desactivada para pruebas rápidas: Auth → Providers → Email).
 - [ ] Migrar usuarios históricos de Firebase (script de export → `auth.admin.importUser` + insert en `profiles`).
 - [ ] App Check/Attestation (Play Integrity) para endurecer la RPC de reportes contra abuso.
-- [ ] Firmar el release con keystore propio (`android/key.properties`).
+- [ ] Firmar el release Android con keystore propio (`android/key.properties`).
 
 ---
 

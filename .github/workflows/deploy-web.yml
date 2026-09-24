@@ -1,0 +1,56 @@
+name: Deploy web (JaGuarD admin) a Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'jaguard_app/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Flutter fijo (por reproducibilidad). Sube la versión cuando quieras.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        working-directory: jaguard_app
+        run: flutter pub get
+
+      - name: Analizar (falla si hay errores)
+        working-directory: jaguard_app
+        run: flutter analyze --fatal-infos || flutter analyze
+
+      - name: Inyectar Maps JS API key y compilar web
+        working-directory: jaguard_app
+        env:
+          MAPS_JS_API_KEY: ${{ secrets.MAPS_JS_API_KEY }}
+        run: |
+          sed -i "s/__MAPS_JS_API_KEY__/${MAPS_JS_API_KEY}/g" web/index.html
+          flutter build web --release
+
+      - name: Copiar configuración de Vercel al output
+        working-directory: jaguard_app
+        run: cp vercel.json build/web/vercel.json
+
+      - name: Desplegar a Vercel (producción)
+        working-directory: jaguard_app/build/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm i -g vercel@latest
+          vercel deploy . --prebuilt --prod --yes --token "$VERCEL_TOKEN"

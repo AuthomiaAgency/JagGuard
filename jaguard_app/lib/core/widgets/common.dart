@@ -45,6 +45,20 @@ class BrandMark extends StatelessWidget {
         height: size,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
+        // Nunca romper la UI: si el asset no estuviera disponible,
+        // se muestra un monograma de respaldo con los mismos colores.
+        errorBuilder: (BuildContext context, Object error, StackTrace? _) =>
+            Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: useWhite ? AppColors.darkText : AppColors.lightText,
+            borderRadius: BorderRadius.circular(size * 0.28),
+          ),
+          child: Icon(Icons.pets_rounded,
+              color: useWhite ? AppColors.darkBackground : Colors.white,
+              size: size * 0.55),
+        ),
       ),
     );
 

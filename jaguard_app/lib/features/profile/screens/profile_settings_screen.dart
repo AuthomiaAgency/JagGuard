@@ -226,7 +226,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                 const SizedBox(height: 18),
                 if (profile?.displayContact.contains('@') == true &&
                     !profile!.displayContact.contains('@coex5.local') &&
-                    !profile!.displayContact.contains('@jaguard.local'))
+                    !profile.displayContact.contains('@jaguard.local'))
                   OutlinedButton.icon(
                     onPressed: () => showDialog<void>(
                       context: context,

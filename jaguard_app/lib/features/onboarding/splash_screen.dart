@@ -48,40 +48,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               opacity: _fade,
               child: ScaleTransition(
                 scale: _scale,
-                child: const BrandMark(size: 132),
+                child: const BrandMark(size: 118, showWordmark: true),
               ),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 30),
             FadeTransition(
               opacity: _fade,
-              child: Column(
-                children: <Widget>[
-                  Text(
-                    'JaGuarD',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                      color:
-                          isDark ? AppColors.darkText : AppColors.lightText,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    translate(lang.code, 'splash.tagline'),
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.6,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.5),
-                    ),
-                  ),
-                ],
+              child: Text(
+                translate(lang.code, 'splash.tagline'),
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.4,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.5),
+                ),
               ),
             ),
             const SizedBox(height: 42),

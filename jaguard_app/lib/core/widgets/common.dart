@@ -64,37 +64,55 @@ class BrandMark extends StatelessWidget {
 
     if (!showWordmark) return mark;
 
-    return Row(
+    // Lockup completo: jaguar + wordmark con trazos rotos (imagen) y
+    // descriptor pequeño con tracking amplio.
+    final Widget wordmark = Image.asset(
+      useWhite
+          ? 'assets/branding/jaguard_wordmark_light_on_dark.png'
+          : 'assets/branding/jaguard_wordmark_dark_on_light.png',
+      width: size * 2.6,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      errorBuilder: (BuildContext context, Object error, StackTrace? _) =>
+          Text(
+            'JaGuarD',
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: size * 0.42,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.6,
+              color: isDark ? AppColors.darkText : AppColors.lightText,
+              height: 1.1,
+            ),
+          ),
+    );
+
+    return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        mark,
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              'JaGuarD',
-              style: TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: size * 0.42,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.6,
-                color: isDark ? AppColors.darkText : AppColors.lightText,
-                height: 1.1,
-              ),
-            ),
-            Text(
-              'PROTECCIÓN DE FAUNA',
-              style: TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: size * 0.24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-                color: AppColors.primary,
-                height: 1.2,
-              ),
-            ),
+            mark,
+            const SizedBox(width: 10),
+            wordmark,
           ],
+        ),
+        SizedBox(height: size * 0.06),
+        Text(
+          'PROTECCIÓN DE FAUNA',
+          style: TextStyle(
+            fontFamily: AppTheme.fontFamily,
+            fontSize: size * 0.13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: size * 0.055,
+            color: isDark
+                ? AppColors.darkTextMuted
+                : AppColors.lightTextMuted,
+            height: 1.1,
+          ),
         ),
       ],
     );

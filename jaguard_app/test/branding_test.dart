@@ -81,11 +81,21 @@ void main() {
     );
   });
 
-  testWidgets('El wordmark dice JaGuarD (sin COEX)', (WidgetTester tester) async {
+  testWidgets('El lockup usa el wordmark roto y no contiene COEX',
+      (WidgetTester tester) async {
     await tester.pumpWidget(_wrap(const BrandMark(size: 48, showWordmark: true)));
     await tester.pumpAndSettle();
 
-    expect(find.text('JaGuarD'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((Widget w) =>
+          w is Image &&
+          w.image is AssetImage &&
+          (w.image as AssetImage).assetName ==
+              'assets/branding/jaguard_wordmark_dark_on_light.png'),
+      findsOneWidget,
+      reason: 'El wordmark JaGuarD con trazos rotos debe renderizarse',
+    );
+    expect(find.text('PROTECCIÓN DE FAUNA'), findsOneWidget);
     expect(find.textContaining('COEX'), findsNothing);
     expect(find.textContaining('Coex'), findsNothing);
   });

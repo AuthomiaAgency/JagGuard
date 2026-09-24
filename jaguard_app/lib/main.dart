@@ -70,7 +70,7 @@ class _JaguardAppState extends ConsumerState<JaguardApp> {
     final GoRouter router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'JagGuard — COEX 5.0',
+      title: 'JaGuarD',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

@@ -57,7 +57,7 @@ class SessionState {
 /// Controlador de sesión: restaura el estado, escucha cambios de auth
 /// y expone acciones de login/registro/logout.
 class SessionController extends Notifier<SessionState> {
-  static const String _onboardingKey = 'coex5_onboarding_done';
+  static const String _onboardingKey = 'jaguard_onboarding_done';
 
   @override
   SessionState build() {

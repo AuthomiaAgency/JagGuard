@@ -70,7 +70,7 @@ class BrandMark extends StatelessWidget {
               ),
             ),
             Text(
-              'COEX 5.0',
+              'PROTECCIÓN DE FAUNA',
               style: TextStyle(
                 fontFamily: AppTheme.fontFamily,
                 fontSize: size * 0.24,

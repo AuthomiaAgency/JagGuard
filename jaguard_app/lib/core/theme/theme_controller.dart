@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum ThemeModePref { light, dark, system }
 
 class ThemeController extends Notifier<ThemeModePref> {
-  static const String _prefKey = 'coex5_theme';
+  static const String _prefKey = 'jaguard_theme';
 
   @override
   ThemeModePref build() {

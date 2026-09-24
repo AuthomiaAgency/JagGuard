@@ -242,7 +242,7 @@ String translate(String languageCode, String key, [Map<String, dynamic>? params]
 
 /// Controlador persistente del idioma activo.
 class LanguageController extends Notifier<AppLanguage> {
-  static const String _prefKey = 'coex5_language';
+  static const String _prefKey = 'jaguard_language';
 
   @override
   AppLanguage build() {
